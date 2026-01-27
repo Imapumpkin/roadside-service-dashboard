@@ -10,7 +10,7 @@ from io import BytesIO
 # ============================================================================
 # CONFIGURATION
 # ============================================================================
-MONTHLY_BUDGET = 2_000_000
+MONTHLY_BUDGET = 200_000
 HEALTH_THRESHOLD_HEALTHY = 5
 HEALTH_THRESHOLD_WARNING = 15
 CACHE_TTL = 3600
@@ -215,7 +215,7 @@ st.markdown("""
     .service-table td { padding: 12px 16px; border-bottom: 1px solid #E2E8F0; background-color: #FFFFFF; }
     .service-table tr:hover td { background-color: #F8FAFC; }
     .subtotal-row td { background-color: #EBF5FB !important; font-weight: 600; color: #1B2838; border-top: 2px solid #4A90D9; border-bottom: 2px solid #4A90D9; }
-    .total-row td { background: linear-gradient(135deg, #1B2838 0%, #2A3F54 100%) !important; color: white !important; font-weight: 700; font-size: 14px; padding: 16px; border: none; }
+    .total-row td { background: linear-gradient(135deg, #1B2838 0%, #2A3F54 100%) !important; color: white !important; font-weight: 700; font-size: 14px; padding: 16px; border: none; position: sticky; bottom: 0; z-index: 2; }
     .bar-cell { display: flex; align-items: center; gap: 8px; min-width: 100px; }
     .bar-cell-number { min-width: 40px; font-weight: 600; color: #1B2838; font-variant-numeric: tabular-nums; text-align: right; }
     .bar-cell-number.zero-value { color: #A0AEC0; font-weight: 400; }
@@ -253,6 +253,12 @@ st.markdown("""
         .health-indicator .health-stats { grid-template-columns: 1fr 1fr; }
         .bar-container { display: none; }
         .bar-cell { min-width: auto; }
+    }
+    @media (max-width: 1200px) {
+        div[style*="grid-template-columns:repeat(6"] { grid-template-columns: repeat(3, 1fr) !important; }
+    }
+    @media (max-width: 768px) {
+        div[style*="grid-template-columns:repeat(6"] { grid-template-columns: repeat(2, 1fr) !important; }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -312,9 +318,18 @@ def process_dataframe(df_raw):
 
     # Extract province from license plate
     if 'ทะเบียนรถ' in df.columns:
-        # Specifically targeting . ! @ # $ % ^ & *
-        df['จังหวัด ทะเบียนรถ'] = df['จังหวัด ทะเบียนรถ'].str.replace(r'[.!@#$%^&*]', '', regex=True).str.strip()
-        df['จังหวัด ทะเบียนรถ'] = df['ทะเบียนรถ'].str.extract(r'\d([ก-๙a-zA-Z]+)$', expand=False)
+        # Clean special characters from existing province column
+        if 'จังหวัด ทะเบียนรถ' in df.columns:
+            df['จังหวัด ทะเบียนรถ'] = df['จังหวัด ทะเบียนรถ'].astype(str).str.replace(r'[.!@#$%^&*\d]', '', regex=True).str.strip()
+            df['จังหวัด ทะเบียนรถ'] = df['จังหวัด ทะเบียนรถ'].replace(['', 'nan', 'None', '<NA>'], pd.NA)
+        # Extract trailing Thai text after the last digit in the plate
+        plate_province = df['ทะเบียนรถ'].astype(str).str.extract(r'(\d)[.\s]*([ก-๙]+)\s*[.!@#$%^&*]*\s*$', expand=True)
+        extracted = plate_province[1]
+        # Only fill where the existing column is missing
+        if 'จังหวัด ทะเบียนรถ' in df.columns:
+            df['จังหวัด ทะเบียนรถ'] = df['จังหวัด ทะเบียนรถ'].fillna(extracted)
+        else:
+            df['จังหวัด ทะเบียนรถ'] = extracted
         df['จังหวัด ทะเบียนรถ'] = df['จังหวัด ทะเบียนรถ'].replace(['กรุงเทพ', 'กทม'], 'กรุงเทพมหานคร')
 
     # Convert Fee to numeric
@@ -436,6 +451,9 @@ def generate_service_table_html(data, years_list):
                 cnt = len(svc_df[svc_df['Year'] == yr])
                 max_count = max(max_count, cnt)
 
+    num_year_cols = len(years_list)
+    total_cols = num_year_cols + 3  # LOB + Service Type + years + Total
+
     tbl = '<div class="service-table-container"><table class="service-table">'
     tbl += '<thead><tr><th>LOB</th><th>Service Type</th>'
     for yr in years_list:
@@ -455,7 +473,7 @@ def generate_service_table_html(data, years_list):
             row_total = 0
             tbl += '<tr>'
             if idx == 0:
-                tbl += f'<td rowspan="{len(service_types) + 1}" style="background-color:#F7FAFC;font-weight:600;vertical-align:middle;color:#1B2838;border-right:2px solid #E2E8F0;">{html.escape(str(lob))}</td>'
+                tbl += f'<td rowspan="{len(service_types)}" style="background-color:#F7FAFC;font-weight:600;vertical-align:middle;color:#1B2838;border-right:2px solid #E2E8F0;">{html.escape(str(lob))}</td>'
             tbl += f'<td style="color:#4A5568;">{html.escape(str(svc))}</td>'
 
             for yr in years_list:
@@ -472,16 +490,17 @@ def generate_service_table_html(data, years_list):
             gt += row_total
             tbl += f'<td style="font-weight:700;color:#1B2838;">{row_total}</td></tr>'
 
-        tbl += '<tr class="subtotal-row">'
-        tbl += f'<td><strong>Subtotal - {html.escape(str(lob))}</strong></td>'
+        # Subtotal row spans full width
+        tbl += f'<tr class="subtotal-row"><td colspan="2"><strong>Subtotal - {html.escape(str(lob))}</strong></td>'
         for yr in years_list:
-            tbl += f'<td><strong>{lt_per_year[yr]}</strong></td>'
-        tbl += f'<td><strong>{lt}</strong></td></tr>'
+            tbl += f'<td><strong>{lt_per_year[yr]:,}</strong></td>'
+        tbl += f'<td><strong>{lt:,}</strong></td></tr>'
 
-    tbl += '<tr class="total-row"><td colspan="2"><strong>GRAND TOTAL</strong></td>'
+    # Grand total row - sticky bold at bottom
+    tbl += f'<tr class="total-row"><td colspan="2"><strong>GRAND TOTAL</strong></td>'
     for yr in years_list:
-        tbl += f'<td><strong>{gt_per_year[yr]}</strong></td>'
-    tbl += f'<td><strong>{gt}</strong></td></tr>'
+        tbl += f'<td><strong>{gt_per_year[yr]:,}</strong></td>'
+    tbl += f'<td><strong>{gt:,}</strong></td></tr>'
     tbl += '</tbody></table></div>'
     return tbl
 
@@ -617,25 +636,25 @@ current_month = datetime.now().month
 ytd_actual = cur_df[cur_df['Month'] <= current_month]['Fee (Baht)'].sum()
 ytd_expected = MONTHLY_BUDGET * current_month
 
-col1, col2, col3, col4, col5, col6 = st.columns(6)
+ytd_var = ((ytd_actual - ytd_expected) / ytd_expected * 100) if ytd_expected > 0 else 0
+dc = "negative" if yoy_change > 0 else "positive"
+ds = "▲" if yoy_change >= 0 else "▼"
+yc = "negative" if ytd_var > 0 else "positive"
 
-with col1:
-    st.markdown(f'<div class="metric-card"><div class="metric-title">Total Cases</div><div class="metric-value">{total_cases:,}</div></div>', unsafe_allow_html=True)
-with col2:
-    st.markdown(f'<div class="metric-card"><div class="metric-title">Total Fee</div><div class="metric-value">฿{total_fee:,.0f}</div></div>', unsafe_allow_html=True)
-with col3:
-    st.markdown(f'<div class="metric-card"><div class="metric-title">Avg Fee/Case</div><div class="metric-value">฿{avg_fee:,.0f}</div></div>', unsafe_allow_html=True)
-with col4:
-    # Cost increase = bad (red), decrease = good (green)
-    dc = "negative" if yoy_change > 0 else "positive"
-    ds = "▲" if yoy_change >= 0 else "▼"
-    st.markdown(f'<div class="metric-card"><div class="metric-title">YoY Change ({current_year} vs {prev_year})</div><div class="metric-value"><span class="{dc}">{ds} {abs(yoy_change):.1f}%</span></div></div>', unsafe_allow_html=True)
-with col5:
-    st.markdown(f'<div class="metric-card"><div class="metric-title">Monthly Budget</div><div class="metric-value">฿{MONTHLY_BUDGET:,}</div></div>', unsafe_allow_html=True)
-with col6:
-    ytd_var = ((ytd_actual - ytd_expected) / ytd_expected * 100) if ytd_expected > 0 else 0
-    yc = "negative" if ytd_var > 0 else "positive"
-    st.markdown(f'<div class="metric-card"><div class="metric-title">YTD vs Expected</div><div class="metric-value"><span class="{yc}">{ytd_var:+.1f}%</span></div><div style="font-size:11px;opacity:0.8;">฿{ytd_actual:,.0f} / ฿{ytd_expected:,.0f}</div></div>', unsafe_allow_html=True)
+kpi_cards = [
+    ("Total Cases", f"{total_cases:,}", ""),
+    ("Total Fee", f"฿{total_fee:,.0f}", ""),
+    ("Avg Fee/Case", f"฿{avg_fee:,.0f}", ""),
+    (f"YoY Change ({current_year} vs {prev_year})", f'<span class="{dc}">{ds} {abs(yoy_change):.1f}%</span>', ""),
+    ("Monthly Budget", f"฿{MONTHLY_BUDGET:,}", ""),
+    ("YTD vs Expected", f'<span class="{yc}">{ytd_var:+.1f}%</span>', f'<div style="font-size:11px;opacity:0.8;">฿{ytd_actual:,.0f} / ฿{ytd_expected:,.0f}</div>'),
+]
+
+kpi_html = '<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:16px;">'
+for title, value, extra in kpi_cards:
+    kpi_html += f'<div class="metric-card"><div class="metric-title">{title}</div><div class="metric-value">{value}</div>{extra}</div>'
+kpi_html += '</div>'
+st.markdown(kpi_html, unsafe_allow_html=True)
 
 # ============================================================================
 # PORTFOLIO HEALTH
@@ -692,41 +711,86 @@ if pivot_rows or pivot_columns:
         agg_func = agg_map[pivot_agg]
 
         if pivot_value == 'Case Count':
-            # Use a numeric stand-in column for counting
             _pivot_src = filtered_df.copy()
             _pivot_src['_count'] = 1
             val_col = '_count'
             agg_func = 'sum' if pivot_agg == 'Count' else agg_func
         else:
-            _pivot_src = filtered_df
+            _pivot_src = filtered_df.copy()
             val_col = pivot_value
 
-        pivot_result = pd.pivot_table(
-            _pivot_src,
+        # Ensure all pivot row/column fields are string type to avoid unhashable issues
+        all_pivot_fields = list(set(pivot_rows + pivot_columns))
+        for col_name in all_pivot_fields:
+            _pivot_src[col_name] = _pivot_src[col_name].astype(str).fillna('(blank)')
+
+        # Ensure value column is numeric
+        if val_col != '_count':
+            _pivot_src[val_col] = pd.to_numeric(_pivot_src[val_col], errors='coerce').fillna(0)
+
+        pivot_kwargs = dict(
+            data=_pivot_src,
             values=val_col,
-            index=pivot_rows if pivot_rows else None,
-            columns=pivot_columns if pivot_columns else None,
             aggfunc=agg_func,
             fill_value=0,
             margins=True,
             margins_name='Grand Total',
         )
+        if pivot_rows:
+            pivot_kwargs['index'] = pivot_rows
+        if pivot_columns:
+            pivot_kwargs['columns'] = pivot_columns
+
+        pivot_result = pd.pivot_table(**pivot_kwargs)
 
         # Flatten multi-level column names
         if isinstance(pivot_result.columns, pd.MultiIndex):
             pivot_result.columns = [' | '.join(str(c) for c in col).strip(' | ') for col in pivot_result.columns]
 
+        # If index is a MultiIndex, reset it so each row field becomes its own column
+        if isinstance(pivot_result.index, pd.MultiIndex):
+            pivot_result = pivot_result.reset_index()
+        elif pivot_result.index.name:
+            pivot_result = pivot_result.reset_index()
+
         # Format numeric columns
         fmt_pivot = pivot_result.copy()
-        for col in fmt_pivot.columns:
-            if fmt_pivot[col].dtype in ['float64', 'float32']:
-                if pivot_agg in ('Sum', 'Count'):
-                    fmt_pivot[col] = fmt_pivot[col].astype(int)
+        numeric_cols = fmt_pivot.select_dtypes(include=['float64', 'float32']).columns
+        for col in numeric_cols:
+            if pivot_agg in ('Sum', 'Count'):
+                fmt_pivot[col] = fmt_pivot[col].astype(int)
 
-        st.dataframe(fmt_pivot, use_container_width=True, height=min(len(fmt_pivot) * 35 + 45, 600))
+        # Separate grand total row from data rows so sorting won't move it
+        gt_label = 'Grand Total'
+        row_id_cols = [c for c in fmt_pivot.columns if c in pivot_rows]
+        if row_id_cols:
+            gt_mask = fmt_pivot[row_id_cols[0]].astype(str) == gt_label
+        else:
+            gt_mask = pd.Series([False] * len(fmt_pivot), index=fmt_pivot.index)
 
-        # Download pivot
-        csv_pivot = fmt_pivot.to_csv(encoding='utf-8-sig').encode('utf-8-sig')
+        data_rows = fmt_pivot[~gt_mask].reset_index(drop=True)
+        grand_total_rows = fmt_pivot[gt_mask].reset_index(drop=True)
+
+        # Display data rows (sortable by user)
+        if len(data_rows) > 0:
+            st.dataframe(data_rows, use_container_width=True, height=min(len(data_rows) * 35 + 45, 550), hide_index=True)
+
+        # Display grand total as a static, bold HTML table below
+        if len(grand_total_rows) > 0:
+            gt_html = '<div style="background:linear-gradient(135deg,#1B2838,#2A3F54);border-radius:0 0 8px 8px;padding:12px 16px;margin-top:-16px;">'
+            gt_html += '<table style="width:100%;color:white;font-weight:700;font-size:14px;border:none;border-collapse:collapse;"><tr>'
+            for col in grand_total_rows.columns:
+                val = grand_total_rows[col].iloc[0]
+                if isinstance(val, (int, float)):
+                    display_val = f"{val:,.0f}" if isinstance(val, float) else f"{val:,}"
+                else:
+                    display_val = str(val)
+                gt_html += f'<td style="padding:8px 12px;border:none;">{display_val}</td>'
+            gt_html += '</tr></table></div>'
+            st.markdown(gt_html, unsafe_allow_html=True)
+
+        # Download pivot (full data including grand total)
+        csv_pivot = fmt_pivot.to_csv(index=False, encoding='utf-8-sig').encode('utf-8-sig')
         st.download_button("Download Pivot CSV", data=csv_pivot,
                            file_name="RSA_Pivot_Export.csv", mime="text/csv", key="dl_pivot")
     except Exception as e:
