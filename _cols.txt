@@ -1,0 +1,135 @@
+[0] ลำดับ | nunique=132
+[1] เลขรับแจ้ง | nunique=4600
+[2] วันที่ | nunique=1162
+[3] เวลา | nunique=1321
+[4] Roadside_Plan | nunique=1
+[5] Policy No. | nunique=1587
+[6] วันเริ่มต้นคุ้มครอง | nunique=385
+[7] วันสิ้นสุดความคุ้มครอง | nunique=379
+[8]  Preriod Days | nunique=1
+[9] Policy Type | nunique=6
+[10] ชื่อนามสกุลลูกค้า | nunique=3856
+[11] เบอร์โทรศัพท์ | nunique=3802
+[12] ทะเบียนรถ | nunique=1753
+[13] จังหวัด ทะเบียนรถ | nunique=1
+[14] ปีที่จดทะเบียน | nunique=1
+[15] MOTOR_CODE | nunique=1
+[16] ยี่ห้อรถ | nunique=27
+[17] รุ่นรถ | nunique=174
+[18] สถานที่เกิดเหตุ | nunique=1321
+[19] จังหวัด | nunique=75
+[20] สาเหตุการขอใช้บริการ | nunique=2147
+[21] ประเภทการบริการ | nunique=7
+[22] การให้บริการ | nunique=1969
+[23] ต้นทาง | nunique=0
+[24] ปลายทาง | nunique=442
+[25] ระยะทาง (KM) | nunique=93
+[26] Fee
+ (Baht) | nunique=1069
+[27] ลูกค้าจ่ายส่วนต่าง | nunique=693
+[28] Exceed Fee (Baht) | nunique=0
+[29] รหัสโครงการ | nunique=25
+[30] แผนก | nunique=22
+[31] หมายเหตุ | nunique=45
+
+--- ประเภทการบริการ (col 21) unique values ---
+  สอบถามข้อมูล
+  ลูกค้าแจ้งยกเลิก
+  ใช้บริการในด้านรถยก
+  ใช้บริการในด้านช่าง
+  ใช้บริการในด้านน้ำมัน
+  ปรึกษาช่างเทคนิค
+  ใช้บริการในด้านกุญแจ
+
+--- Policy Type (col 9) unique ---
+  AV1
+  AC3
+  AV9
+  AV5
+  AV3
+
+--- จังหวัด (col 19) sample ---
+  -
+  กรุงเทพ
+  ฉะเชิงเทรา
+  ประจวบคีรีขันธ์
+  ชลบุรี
+  อุบลราชธานี
+  สุพรรณบุรี
+  พิษณุโลก
+  สมุทรสาคร
+  นครสวรรค์
+  ศรีสะเกษ
+  สุราษฎร์ธานี
+  นนทบุรี
+  ระยอง
+  นครราชสีมา
+
+--- ยี่ห้อรถ (col 16) unique ---
+  Suzuki
+  Honda
+  Mitsubishi 
+  Mitsubishi
+  Isuzu
+  TOYOTA
+  -
+  NISSAN
+  HONDA
+  MAZDA
+  OTHER
+  MITSUBISHI
+  ISUZU
+  MERCEDES-BENZ
+  FORD
+  SUZUKI
+  BMW
+  AUDI
+  PROTON
+  MINI
+  MG
+  PORSCHE
+  HYUNDAI
+  SUBARU
+  CHEVROLET
+  VOLVO
+  PEUGEOT
+
+--- Fee col sample ---
+  Fee col name: ['Fee\n (Baht)']
+  dtype: object
+  sample: [5470, 3382, 1400, 2160, 2123]
+  sum: 3965365.0
+
+--- Date col ---
+  Year range: 2022.0 - 2026.0
+  Year value counts:
+วันที่
+2022.0    1047
+2023.0    1390
+2024.0    1378
+2025.0     673
+2026.0     132
+
+--- รหัสโครงการ (col 29) unique ---
+  -
+  C17
+  63
+  C18
+  53
+  144
+  รอตรวจสอบ
+  1
+  68
+  30
+
+--- แผนก (col 30) unique ---
+  -
+  B2
+  TR
+  รอตรวจสอบ
+  JS
+  HY
+  SR
+  DM
+  NM
+  J3
