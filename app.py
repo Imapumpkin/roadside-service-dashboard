@@ -619,35 +619,56 @@ st.markdown(f"### Roadside Assistance Monitoring <span class='data-freshness'>Da
 # ============================================================================
 st.markdown('<div class="section-header">📈 Key Performance Indicators</div>', unsafe_allow_html=True)
 
-total_cases = len(filtered_df)
-total_fee = filtered_df['Fee (Baht)'].sum()
-avg_fee_raw = filtered_df['Fee (Baht)'].mean()
-avg_fee = 0.0 if pd.isna(avg_fee_raw) else avg_fee_raw
-
 current_year = max(selected_years)
 prev_year = current_year - 1
 cur_df = filtered_df[filtered_df['Year'] == current_year]
 prev_df = filtered_df[filtered_df['Year'] == prev_year]
+
+# Current year metrics
+cur_cases = len(cur_df)
 cur_fee = cur_df['Fee (Baht)'].sum()
+cur_avg_raw = cur_df['Fee (Baht)'].mean()
+cur_avg = 0.0 if pd.isna(cur_avg_raw) else cur_avg_raw
+
+# Previous year metrics
+prev_cases = len(prev_df)
 prev_fee = prev_df['Fee (Baht)'].sum()
-yoy_change = ((cur_fee - prev_fee) / prev_fee * 100) if prev_fee > 0 else 0
+prev_avg_raw = prev_df['Fee (Baht)'].mean()
+prev_avg = 0.0 if pd.isna(prev_avg_raw) else prev_avg_raw
 
 current_month = datetime.now().month
 ytd_actual = cur_df[cur_df['Month'] <= current_month]['Fee (Baht)'].sum()
 ytd_expected = MONTHLY_BUDGET * current_month
-
 ytd_var = ((ytd_actual - ytd_expected) / ytd_expected * 100) if ytd_expected > 0 else 0
-dc = "negative" if yoy_change > 0 else "positive"
-ds = "▲" if yoy_change >= 0 else "▼"
+prev_ytd_actual = prev_df[prev_df['Month'] <= current_month]['Fee (Baht)'].sum()
+
+def yoy_html(cur_val, prev_val):
+    """Generate YoY comparison HTML snippet. Cost increase = bad (red), decrease = good (green)."""
+    if prev_val == 0:
+        return f'<div style="font-size:11px;margin-top:8px;opacity:0.8;">vs {prev_year}: N/A</div>'
+    pct = (cur_val - prev_val) / prev_val * 100
+    # For cost: increase is negative(bad), decrease is positive(good)
+    cls = "negative" if pct > 0 else "positive"
+    arrow = "▲" if pct >= 0 else "▼"
+    return f'<div style="font-size:11px;margin-top:8px;opacity:0.9;"><span class="{cls}">{arrow} {abs(pct):.1f}%</span> vs {prev_year}</div>'
+
+def yoy_html_cases(cur_val, prev_val):
+    """Generate YoY for cases - increase is neutral, just informational."""
+    if prev_val == 0:
+        return f'<div style="font-size:11px;margin-top:8px;opacity:0.8;">vs {prev_year}: N/A</div>'
+    pct = (cur_val - prev_val) / prev_val * 100
+    arrow = "▲" if pct >= 0 else "▼"
+    return f'<div style="font-size:11px;margin-top:8px;opacity:0.9;">{arrow} {abs(pct):.1f}% vs {prev_year}</div>'
+
 yc = "negative" if ytd_var > 0 else "positive"
 
 kpi_cards = [
-    ("Total Cases", f"{total_cases:,}", ""),
-    ("Total Fee", f"฿{total_fee:,.0f}", ""),
-    ("Avg Fee/Case", f"฿{avg_fee:,.0f}", ""),
-    (f"YoY Change ({current_year} vs {prev_year})", f'<span class="{dc}">{ds} {abs(yoy_change):.1f}%</span>', ""),
-    ("Monthly Budget", f"฿{MONTHLY_BUDGET:,}", ""),
-    ("YTD vs Expected", f'<span class="{yc}">{ytd_var:+.1f}%</span>', f'<div style="font-size:11px;opacity:0.8;">฿{ytd_actual:,.0f} / ฿{ytd_expected:,.0f}</div>'),
+    (f"Total Cases ({current_year})", f"{cur_cases:,}", yoy_html_cases(cur_cases, prev_cases)),
+    (f"Total Fee ({current_year})", f"฿{cur_fee:,.0f}", yoy_html(cur_fee, prev_fee)),
+    (f"Avg Fee/Case ({current_year})", f"฿{cur_avg:,.0f}", yoy_html(cur_avg, prev_avg)),
+    ("Monthly Budget", f"฿{MONTHLY_BUDGET:,}", f'<div style="font-size:11px;margin-top:8px;opacity:0.8;">Annual: ฿{MONTHLY_BUDGET * 12:,}</div>'),
+    ("YTD vs Expected", f'<span class="{yc}">{ytd_var:+.1f}%</span>', f'<div style="font-size:11px;margin-top:8px;opacity:0.8;">฿{ytd_actual:,.0f} / ฿{ytd_expected:,.0f}</div>'),
+    (f"YTD Actual ({current_year})", f"฿{ytd_actual:,.0f}", yoy_html(ytd_actual, prev_ytd_actual)),
 ]
 
 kpi_html = '<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:16px;">'
@@ -667,9 +688,10 @@ var_pct = ((run_rate - MONTHLY_BUDGET) / MONTHLY_BUDGET * 100) if MONTHLY_BUDGET
 var_amt = run_rate - MONTHLY_BUDGET
 projection = run_rate * 12
 
-if abs(var_pct) <= HEALTH_THRESHOLD_HEALTHY:
+# var_pct negative = under budget (good), positive = over budget (bad)
+if var_pct <= HEALTH_THRESHOLD_HEALTHY:
     h_status, h_class, h_badge = "HEALTHY", "health-healthy", '<span class="health-badge badge-healthy">Healthy</span>'
-elif abs(var_pct) <= HEALTH_THRESHOLD_WARNING:
+elif var_pct <= HEALTH_THRESHOLD_WARNING:
     h_status, h_class, h_badge = "WARNING", "health-warning", '<span class="health-badge badge-warning">Warning</span>'
 else:
     h_status, h_class, h_badge = "CRITICAL", "health-critical", '<span class="health-badge badge-critical">Critical</span>'
@@ -775,17 +797,17 @@ if pivot_rows or pivot_columns:
         if len(data_rows) > 0:
             st.dataframe(data_rows, use_container_width=True, height=min(len(data_rows) * 35 + 45, 550), hide_index=True)
 
-        # Display grand total as a static, bold HTML table below
+        # Display grand total as a static, bold HTML row below
         if len(grand_total_rows) > 0:
-            gt_html = '<div style="background:linear-gradient(135deg,#1B2838,#2A3F54);border-radius:0 0 8px 8px;padding:12px 16px;margin-top:-16px;">'
-            gt_html += '<table style="width:100%;color:white;font-weight:700;font-size:14px;border:none;border-collapse:collapse;"><tr>'
+            gt_html = '<div style="background:linear-gradient(135deg,#1B2838,#2A3F54);border-radius:0 0 8px 8px;padding:6px 16px;margin-top:-16px;">'
+            gt_html += '<table style="width:100%;color:white;font-weight:600;font-size:13px;border:none;border-collapse:collapse;"><tr>'
             for col in grand_total_rows.columns:
                 val = grand_total_rows[col].iloc[0]
                 if isinstance(val, (int, float)):
                     display_val = f"{val:,.0f}" if isinstance(val, float) else f"{val:,}"
                 else:
                     display_val = str(val)
-                gt_html += f'<td style="padding:8px 12px;border:none;">{display_val}</td>'
+                gt_html += f'<td style="padding:4px 12px;border:none;">{display_val}</td>'
             gt_html += '</tr></table></div>'
             st.markdown(gt_html, unsafe_allow_html=True)
 
