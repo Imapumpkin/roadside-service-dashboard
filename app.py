@@ -639,7 +639,7 @@ prev_avg = 0.0 if pd.isna(prev_avg_raw) else prev_avg_raw
 current_month = datetime.now().month
 ytd_actual = cur_df[cur_df['Month'] <= current_month]['Fee (Baht)'].sum()
 ytd_expected = MONTHLY_BUDGET * current_month
-ytd_var = ((ytd_actual - ytd_expected) / ytd_expected * 100) if ytd_expected > 0 else 0
+ytd_util = (ytd_actual / ytd_expected * 100) if ytd_expected > 0 else 0
 prev_ytd_actual = prev_df[prev_df['Month'] <= current_month]['Fee (Baht)'].sum()
 
 def yoy_html(cur_val, prev_val):
@@ -660,14 +660,14 @@ def yoy_html_cases(cur_val, prev_val):
     arrow = "▲" if pct >= 0 else "▼"
     return f'<div style="font-size:11px;margin-top:8px;opacity:0.9;">{arrow} {abs(pct):.1f}% vs {prev_year}</div>'
 
-yc = "negative" if ytd_var > 0 else "positive"
+yc = "negative" if ytd_util > 100 else "positive"
 
 kpi_cards = [
     (f"Total Cases ({current_year})", f"{cur_cases:,}", yoy_html_cases(cur_cases, prev_cases)),
     (f"Total Fee ({current_year})", f"฿{cur_fee:,.0f}", yoy_html(cur_fee, prev_fee)),
     (f"Avg Fee/Case ({current_year})", f"฿{cur_avg:,.0f}", yoy_html(cur_avg, prev_avg)),
     ("Monthly Budget", f"฿{MONTHLY_BUDGET:,}", f'<div style="font-size:11px;margin-top:8px;opacity:0.8;">Annual: ฿{MONTHLY_BUDGET * 12:,}</div>'),
-    ("YTD vs Expected", f'<span class="{yc}">{ytd_var:+.1f}%</span>', f'<div style="font-size:11px;margin-top:8px;opacity:0.8;">฿{ytd_actual:,.0f} / ฿{ytd_expected:,.0f}</div>'),
+    ("YTD Budget Utilization", f'<span class="{yc}">{ytd_util:.1f}%</span>', f'<div style="font-size:11px;margin-top:8px;opacity:0.8;">฿{ytd_actual:,.0f} / ฿{ytd_expected:,.0f}</div>'),
     (f"YTD Actual ({current_year})", f"฿{ytd_actual:,.0f}", yoy_html(ytd_actual, prev_ytd_actual)),
 ]
 
@@ -793,13 +793,18 @@ if pivot_rows or pivot_columns:
         data_rows = fmt_pivot[~gt_mask].reset_index(drop=True)
         grand_total_rows = fmt_pivot[gt_mask].reset_index(drop=True)
 
-        # Display data rows (sortable by user)
+        # Display data rows (sortable by user) with comma-formatted numbers
         if len(data_rows) > 0:
-            st.dataframe(data_rows, use_container_width=True, height=min(len(data_rows) * 35 + 45, 550), hide_index=True)
+            display_rows = data_rows.copy()
+            num_cols = display_rows.select_dtypes(include=['int64', 'int32', 'float64', 'float32']).columns
+            col_config = {}
+            for nc in num_cols:
+                col_config[nc] = st.column_config.NumberColumn(nc, format="%,.0f" if display_rows[nc].dtype in ['int64', 'int32'] else "%,.2f")
+            st.dataframe(display_rows, use_container_width=True, height=min(len(display_rows) * 35 + 45, 550), hide_index=True, column_config=col_config)
 
         # Display grand total as a static, bold HTML row below
         if len(grand_total_rows) > 0:
-            gt_html = '<div style="background:linear-gradient(135deg,#1B2838,#2A3F54);border-radius:0 0 8px 8px;padding:6px 16px;margin-top:-16px;">'
+            gt_html = '<div style="background:linear-gradient(135deg,#1B2838,#2A3F54);border-radius:0 0 8px 8px;padding:2px 16px;margin-top:-16px;line-height:1.4;">'
             gt_html += '<table style="width:100%;color:white;font-weight:600;font-size:13px;border:none;border-collapse:collapse;"><tr>'
             for col in grand_total_rows.columns:
                 val = grand_total_rows[col].iloc[0]
@@ -807,7 +812,7 @@ if pivot_rows or pivot_columns:
                     display_val = f"{val:,.0f}" if isinstance(val, float) else f"{val:,}"
                 else:
                     display_val = str(val)
-                gt_html += f'<td style="padding:4px 12px;border:none;">{display_val}</td>'
+                gt_html += f'<td style="padding:2px 12px;border:none;">{display_val}</td>'
             gt_html += '</tr></table></div>'
             st.markdown(gt_html, unsafe_allow_html=True)
 
@@ -957,11 +962,14 @@ with fu1:
         help="Upload a new Excel file to replace the current data source."
     )
     if uploaded_file is not None:
-        persist_uploaded_file(uploaded_file)
-        st.session_state.uploaded_file_bytes = uploaded_file.getvalue()
-        st.session_state.uploaded_file_name = uploaded_file.name
-        st.cache_data.clear()
-        st.rerun()
+        new_bytes = uploaded_file.getvalue()
+        # Only rerun if this is a genuinely new file (avoid infinite reload loop)
+        if st.session_state.uploaded_file_name != uploaded_file.name or st.session_state.uploaded_file_bytes != new_bytes:
+            persist_uploaded_file(uploaded_file)
+            st.session_state.uploaded_file_bytes = new_bytes
+            st.session_state.uploaded_file_name = uploaded_file.name
+            st.cache_data.clear()
+            st.rerun()
 with fu2:
     st.markdown(f"**Current source:** {data_source_label}")
     persisted_path = os.path.join(UPLOAD_DIR, "persisted_upload.xlsx")
