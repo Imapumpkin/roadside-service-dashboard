@@ -5,6 +5,7 @@ import plotly.graph_objects as go
 from datetime import datetime
 import os
 import html
+import re
 from io import BytesIO
 
 # ============================================================================
@@ -245,9 +246,10 @@ st.markdown("""
     /* Footer */
     .dashboard-footer { text-align: center; color: #718096; padding: 32px 20px; margin-top: 48px; border-top: 2px solid #E2E8F0; font-size: 13px; background: white; border-radius: 12px; }
 
-    /* Seamless Filter Expander */
+    /* Seamless Filter Expander - Sticky at top */
+    .filter-sticky-wrapper { position: sticky; top: 0; z-index: 999; background: #F0F2F6; padding: 8px 0 16px 0; }
     .stExpander { border: none !important; box-shadow: none !important; background: transparent !important; }
-    .stExpander > details { border: 1px solid #E2E8F0 !important; border-radius: 8px !important; background: white !important; }
+    .stExpander > details { border: 1px solid #E2E8F0 !important; border-radius: 8px !important; background: white !important; box-shadow: 0 2px 8px rgba(0,0,0,0.06) !important; }
     .stExpander > details > summary { padding: 12px 16px !important; font-weight: 600 !important; color: #1B2838 !important; font-size: 14px !important; }
     .stExpander > details[open] > summary { border-bottom: 1px solid #E2E8F0 !important; }
     .stExpander > details > div { padding: 16px !important; }
@@ -534,7 +536,7 @@ def convert_df_to_csv(_df):
 
 
 # ============================================================================
-# FILTERS – collapsible, hidden by default
+# FILTERS – collapsible, hidden by default, sticky at top
 # ============================================================================
 available_years = sorted([int(y) for y in df['Year'].dropna().unique()])
 available_services = safe_sorted_unique(df['ประเภทการบริการ'])
@@ -547,20 +549,25 @@ available_regions = safe_sorted_unique(df['จังหวัด']) if 'จั�
 available_makes = safe_sorted_unique(df['ยี่ห้อรถ']) if 'ยี่ห้อรถ' in df.columns else []
 available_models = safe_sorted_unique(df['รุ่นรถ']) if 'รุ่นรถ' in df.columns else []
 
-with st.expander("📊 Filters", expanded=False):
-    fc1, fc2, fc3, fc4 = st.columns(4)
-    with fc1:
-        selected_years = st.multiselect("Year", options=available_years, default=available_years, key="filter_year")
-        selected_services = st.multiselect("Service Type", options=['All'] + available_services, default=['All'], key="filter_service")
-    with fc2:
-        selected_lobs = st.multiselect("LOB", options=['All'] + available_lobs, default=['All'], key="filter_lob")
-        selected_month_display = st.multiselect("Month", options=['All'] + month_options, default=['All'], key="filter_month")
-    with fc3:
-        selected_channels = st.multiselect("Channel", options=['All'] + available_channels, default=['All'], key="filter_channel")
-        selected_regions = st.multiselect("Region", options=['All'] + available_regions, default=['All'], key="filter_region")
-    with fc4:
-        selected_makes = st.multiselect("Vehicle Make", options=['All'] + available_makes, default=['All'], key="filter_make")
-        selected_models = st.multiselect("Vehicle Model", options=['All'] + available_models, default=['All'], key="filter_model")
+# Sticky filter container
+filter_container = st.container()
+with filter_container:
+    st.markdown('<div class="filter-sticky-wrapper">', unsafe_allow_html=True)
+    with st.expander("📊 Filters", expanded=False):
+        fc1, fc2, fc3, fc4 = st.columns(4)
+        with fc1:
+            selected_years = st.multiselect("Year", options=available_years, default=available_years, key="filter_year")
+            selected_services = st.multiselect("Service Type", options=['All'] + available_services, default=['All'], key="filter_service")
+        with fc2:
+            selected_lobs = st.multiselect("LOB", options=['All'] + available_lobs, default=['All'], key="filter_lob")
+            selected_month_display = st.multiselect("Month", options=['All'] + month_options, default=['All'], key="filter_month")
+        with fc3:
+            selected_channels = st.multiselect("Channel", options=['All'] + available_channels, default=['All'], key="filter_channel")
+            selected_regions = st.multiselect("Region", options=['All'] + available_regions, default=['All'], key="filter_region")
+        with fc4:
+            selected_makes = st.multiselect("Vehicle Make", options=['All'] + available_makes, default=['All'], key="filter_make")
+            selected_models = st.multiselect("Vehicle Model", options=['All'] + available_models, default=['All'], key="filter_model")
+    st.markdown('</div>', unsafe_allow_html=True)
 
 if not selected_years:
     st.warning("Please select at least one year.")
@@ -768,22 +775,48 @@ if pivot_rows or pivot_columns:
 
         pivot_result = pd.pivot_table(**pivot_kwargs)
 
-        # Sort columns numerically if they are Month (1,2,3,4,5,6...)
-        if 'Month' in pivot_columns:
-            cols = list(pivot_result.columns)
-            gt_col = 'Grand Total' if 'Grand Total' in cols else None
-            non_gt_cols = [c for c in cols if c != gt_col]
-            try:
-                sorted_cols = sorted(non_gt_cols, key=lambda x: int(str(x)) if str(x).isdigit() else 9999)
-            except:
-                sorted_cols = non_gt_cols
-            if gt_col:
-                sorted_cols.append(gt_col)
-            pivot_result = pivot_result[sorted_cols]
-
-        # Flatten multi-level column names
+        # Flatten multi-level column names first
         if isinstance(pivot_result.columns, pd.MultiIndex):
-            pivot_result.columns = [' | '.join(str(c) for c in col).strip(' | ') for col in pivot_result.columns]
+            new_cols = []
+            for col in pivot_result.columns:
+                col_parts = [str(c) for c in col]
+                # Check if this is the Grand Total column
+                if 'Grand Total' in col_parts:
+                    new_cols.append('Grand Total')
+                else:
+                    new_cols.append(' | '.join(col_parts).strip(' | '))
+            pivot_result.columns = new_cols
+
+        # Sort columns numerically if they contain Month values (1,2,3,4,5,6...)
+        cols = list(pivot_result.columns)
+        # Find Grand Total column (could be exact match or contain "Grand Total")
+        gt_col = None
+        for c in cols:
+            if 'Grand Total' in str(c):
+                gt_col = c
+                break
+        non_gt_cols = [c for c in cols if c != gt_col]
+
+        # Try to sort numerically
+        def sort_key(x):
+            x_str = str(x)
+            # Extract number if it's just a number or starts with number
+            if x_str.isdigit():
+                return (0, int(x_str))
+            # Try to extract leading number
+            match = re.match(r'^(\d+)', x_str)
+            if match:
+                return (0, int(match.group(1)))
+            return (1, x_str)
+
+        try:
+            sorted_cols = sorted(non_gt_cols, key=sort_key)
+        except:
+            sorted_cols = non_gt_cols
+
+        if gt_col:
+            sorted_cols.append(gt_col)
+        pivot_result = pivot_result[sorted_cols]
 
         # If index is a MultiIndex, reset it so each row field becomes its own column
         if isinstance(pivot_result.index, pd.MultiIndex):
@@ -803,21 +836,27 @@ if pivot_rows or pivot_columns:
         # Separate grand total row from data rows so sorting won't move it
         gt_label = 'Grand Total'
         row_id_cols = [c for c in fmt_pivot.columns if c in pivot_rows]
+
+        # Check for Grand Total in any row identifier column
+        gt_mask = pd.Series([False] * len(fmt_pivot), index=fmt_pivot.index)
         if row_id_cols:
-            gt_mask = fmt_pivot[row_id_cols[0]].astype(str) == gt_label
-        else:
-            gt_mask = pd.Series([False] * len(fmt_pivot), index=fmt_pivot.index)
+            for rid_col in row_id_cols:
+                gt_mask |= fmt_pivot[rid_col].astype(str).str.contains('Grand Total', na=False)
 
         data_rows = fmt_pivot[~gt_mask].reset_index(drop=True)
         grand_total_rows = fmt_pivot[gt_mask].reset_index(drop=True)
 
-        # Find numeric columns for data bars and formatting
+        # Find numeric columns for data bars (exclude Grand Total column)
         num_cols_list = list(data_rows.select_dtypes(include=['int64', 'int32', 'float64', 'float32']).columns)
+        # Columns that should have data bars (exclude Grand Total column)
+        data_bar_cols = [c for c in num_cols_list if 'Grand Total' not in str(c)]
 
-        # Calculate max values for data bars
-        max_vals = {}
-        for nc in num_cols_list:
-            max_vals[nc] = data_rows[nc].max() if data_rows[nc].max() > 0 else 1
+        # Calculate GLOBAL max across all data bar columns for consistent scaling
+        global_max = 1
+        for nc in data_bar_cols:
+            col_max = data_rows[nc].max()
+            if col_max > global_max:
+                global_max = col_max
 
         # Display data rows with data bars via HTML table
         if len(data_rows) > 0:
@@ -834,12 +873,16 @@ if pivot_rows or pivot_columns:
                             cell_text = f"{int(val):,}"
                         else:
                             cell_text = f"{val:,.2f}"
-                        # Data bar width percentage
-                        bar_pct = (val / max_vals[col] * 100) if max_vals[col] > 0 else 0
-                        pivot_html += f'''<td style="position:relative;padding:0;">
-                            <div style="position:absolute;top:0;left:0;height:100%;width:{bar_pct:.1f}%;background:linear-gradient(90deg,rgba(74,144,217,0.3),rgba(111,177,255,0.2));z-index:1;"></div>
-                            <div style="position:relative;z-index:2;padding:8px 12px;">{cell_text}</div>
-                        </td>'''
+                        # Data bar only for non-Grand Total columns
+                        if col in data_bar_cols:
+                            bar_pct = (val / global_max * 85) if global_max > 0 else 0
+                            pivot_html += f'''<td style="position:relative;padding:0;">
+                                <div style="position:absolute;top:4px;left:4px;bottom:4px;width:{bar_pct:.1f}%;background:linear-gradient(90deg,rgba(74,144,217,0.35),rgba(111,177,255,0.2));z-index:1;border-radius:3px;"></div>
+                                <div style="position:relative;z-index:2;padding:8px 12px;">{cell_text}</div>
+                            </td>'''
+                        else:
+                            # Grand Total column - no data bar, bold text
+                            pivot_html += f'<td style="padding:8px 12px;font-weight:600;">{cell_text}</td>'
                     else:
                         cell_text = html.escape(str(val))
                         pivot_html += f'<td style="padding:8px 12px;">{cell_text}</td>'
@@ -847,7 +890,7 @@ if pivot_rows or pivot_columns:
             pivot_html += '</tbody></table></div>'
             st.markdown(pivot_html, unsafe_allow_html=True)
 
-        # Display grand total as a compact static row below, aligned with data columns
+        # Display grand total row at the bottom
         if len(grand_total_rows) > 0:
             gt_html = '<div style="background:linear-gradient(135deg,#1B2838,#2A3F54);border-radius:0 0 8px 8px;margin-top:0;">'
             gt_html += '<table class="service-table" style="width:100%;color:white;font-weight:600;font-size:13px;border:none;border-collapse:collapse;"><tr>'
@@ -863,6 +906,25 @@ if pivot_rows or pivot_columns:
                 gt_html += f'<td style="padding:8px 12px;border:none;color:white;">{display_val}</td>'
             gt_html += '</tr></table></div>'
             st.markdown(gt_html, unsafe_allow_html=True)
+        else:
+            # If no grand total row was found, create one from the data
+            if len(data_rows) > 0 and num_cols_list:
+                gt_html = '<div style="background:linear-gradient(135deg,#1B2838,#2A3F54);border-radius:0 0 8px 8px;margin-top:0;">'
+                gt_html += '<table class="service-table" style="width:100%;color:white;font-weight:600;font-size:13px;border:none;border-collapse:collapse;"><tr>'
+                for col in data_rows.columns:
+                    if col in num_cols_list:
+                        total_val = data_rows[col].sum()
+                        if is_int_agg:
+                            display_val = f"{int(total_val):,}"
+                        else:
+                            display_val = f"{total_val:,.2f}"
+                    elif col in row_id_cols and data_rows.columns.get_loc(col) == 0:
+                        display_val = "Grand Total"
+                    else:
+                        display_val = ""
+                    gt_html += f'<td style="padding:8px 12px;border:none;color:white;">{display_val}</td>'
+                gt_html += '</tr></table></div>'
+                st.markdown(gt_html, unsafe_allow_html=True)
 
         # Download pivot (full data including grand total)
         csv_pivot = fmt_pivot.to_csv(index=False, encoding='utf-8-sig').encode('utf-8-sig')
