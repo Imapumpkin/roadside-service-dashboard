@@ -543,7 +543,7 @@ def convert_df_to_csv(_df):
 
 
 # ============================================================================
-# FILTERS – collapsible, hidden by default, sticky at top
+# FILTERS – Available options (UI will be rendered later, above Cost Analysis)
 # ============================================================================
 available_years = sorted([int(y) for y in df['Year'].dropna().unique()])
 available_services = safe_sorted_unique(df['ประเภทการบริการ'])
@@ -556,25 +556,33 @@ available_regions = safe_sorted_unique(df['จังหวัด']) if 'จั�
 available_makes = safe_sorted_unique(df['ยี่ห้อรถ']) if 'ยี่ห้อรถ' in df.columns else []
 available_models = safe_sorted_unique(df['รุ่นรถ']) if 'รุ่นรถ' in df.columns else []
 
-# Sticky filter container
-filter_container = st.container()
-with filter_container:
-    st.markdown('<div class="filter-sticky-wrapper">', unsafe_allow_html=True)
-    with st.expander("📊 Filters", expanded=False):
-        fc1, fc2, fc3, fc4 = st.columns(4)
-        with fc1:
-            selected_years = st.multiselect("Year", options=available_years, default=available_years, key="filter_year")
-            selected_services = st.multiselect("Service Type", options=['All'] + available_services, default=['All'], key="filter_service")
-        with fc2:
-            selected_lobs = st.multiselect("LOB", options=['All'] + available_lobs, default=['All'], key="filter_lob")
-            selected_month_display = st.multiselect("Month", options=['All'] + month_options, default=['All'], key="filter_month")
-        with fc3:
-            selected_channels = st.multiselect("Channel", options=['All'] + available_channels, default=['All'], key="filter_channel")
-            selected_regions = st.multiselect("Region", options=['All'] + available_regions, default=['All'], key="filter_region")
-        with fc4:
-            selected_makes = st.multiselect("Vehicle Make", options=['All'] + available_makes, default=['All'], key="filter_make")
-            selected_models = st.multiselect("Vehicle Model", options=['All'] + available_models, default=['All'], key="filter_model")
-    st.markdown('</div>', unsafe_allow_html=True)
+# Initialize filter session state with defaults if not set
+if 'filter_year' not in st.session_state:
+    st.session_state.filter_year = available_years
+if 'filter_service' not in st.session_state:
+    st.session_state.filter_service = ['All']
+if 'filter_lob' not in st.session_state:
+    st.session_state.filter_lob = ['All']
+if 'filter_month' not in st.session_state:
+    st.session_state.filter_month = ['All']
+if 'filter_channel' not in st.session_state:
+    st.session_state.filter_channel = ['All']
+if 'filter_region' not in st.session_state:
+    st.session_state.filter_region = ['All']
+if 'filter_make' not in st.session_state:
+    st.session_state.filter_make = ['All']
+if 'filter_model' not in st.session_state:
+    st.session_state.filter_model = ['All']
+
+# Get current filter values from session state
+selected_years = st.session_state.filter_year if st.session_state.filter_year else available_years
+selected_services = st.session_state.filter_service
+selected_lobs = st.session_state.filter_lob
+selected_month_display = st.session_state.filter_month
+selected_channels = st.session_state.filter_channel
+selected_regions = st.session_state.filter_region
+selected_makes = st.session_state.filter_make
+selected_models = st.session_state.filter_model
 
 if not selected_years:
     st.warning("Please select at least one year.")
@@ -714,13 +722,17 @@ elif over_budget_pct <= HEALTH_THRESHOLD_WARNING:
 else:
     h_status, h_class, h_badge = "CRITICAL", "health-critical", '<span class="health-badge badge-critical">Critical</span>'
 
+# Calculate percentages for display
+ytd_vs_expected_pct = (ytd_fee / expected_cost_ytd * 100) if expected_cost_ytd > 0 else 0
+projection_vs_budget_pct = (projection / annual_budget * 100) if annual_budget > 0 else 0
+
 st.markdown(f"""
 <div class="health-indicator {h_class}">
     <div class="health-title">{h_badge} Portfolio Status: {h_status}</div>
     <div class="health-stats">
-        <div class="health-stat-item"><div class="health-stat-label">YTD Total Fee vs Expected Cost</div><div class="health-stat-value">฿{ytd_fee:,.0f} / ฿{expected_cost_ytd:,.0f}</div></div>
+        <div class="health-stat-item"><div class="health-stat-label">YTD Total Fee vs Expected Cost</div><div class="health-stat-value">฿{ytd_fee:,.0f} / ฿{expected_cost_ytd:,.0f} ({ytd_vs_expected_pct:.1f}%)</div></div>
         <div class="health-stat-item"><div class="health-stat-label">Monthly Run Rate</div><div class="health-stat-value">฿{run_rate:,.0f}</div></div>
-        <div class="health-stat-item"><div class="health-stat-label">Year-End Projection vs Annual Budget</div><div class="health-stat-value">฿{projection:,.0f} / ฿{annual_budget:,.0f}</div></div>
+        <div class="health-stat-item"><div class="health-stat-label">Year-End Projection vs Annual Budget</div><div class="health-stat-value">฿{projection:,.0f} / ฿{annual_budget:,.0f} ({projection_vs_budget_pct:.1f}%)</div></div>
     </div>
 </div>
 """, unsafe_allow_html=True)
@@ -734,32 +746,31 @@ st.markdown('<div class="section-header">📋 Service Utilization – Interactiv
 pivot_cols_available = [c for c in ['LOB', 'ประเภทการบริการ', 'Year', 'Month', 'จังหวัด', 'ยี่ห้อรถ', 'รุ่นรถ', 'Policy Type', 'รหัสโครงการ', 'แผนก'] if c in filtered_df.columns]
 value_cols_available = [c for c in ['Fee (Baht)', 'ลูกค้าจ่ายส่วนต่าง'] if c in filtered_df.columns]
 
-# Styled control boxes CSS - seamless boxes around dropdowns
+# Styled control boxes CSS - clear seamless boxes around each dropdown
 st.markdown("""
 <style>
-    /* Pivot control container styling */
-    .pivot-controls-row [data-testid="column"] {
-        padding: 0 6px;
-    }
-    .pivot-controls-row [data-testid="column"] > div > div {
+    /* Pivot control box styling */
+    .pivot-box {
         background: white;
         border: 1px solid #E2E8F0;
         border-radius: 10px;
         padding: 14px 16px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+        margin-bottom: 8px;
         transition: all 0.2s ease;
     }
-    .pivot-controls-row [data-testid="column"] > div > div:hover {
+    .pivot-box:hover {
         border-color: #CBD5E0;
         box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     }
-    /* Dropdown/multiselect styling inside boxes */
-    .pivot-controls-row [data-baseweb="select"] {
-        background: #F8FAFC;
-        border-radius: 6px;
-    }
-    .pivot-controls-row [data-baseweb="select"]:hover {
-        background: #F1F5F9;
+    .pivot-box-label {
+        font-size: 12px;
+        font-weight: 600;
+        color: #475569;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
     }
     /* Row reorder section */
     .row-reorder-box {
@@ -780,22 +791,24 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Wrap controls in a container for styling
-st.markdown('<div class="pivot-controls-row">', unsafe_allow_html=True)
+# Pivot controls with seamless boxes
 pc1, pc2, pc3, pc4 = st.columns(4)
 with pc1:
-    st.markdown("**📊 Rows**")
+    st.markdown('<div class="pivot-box"><div class="pivot-box-label">📊 Rows</div>', unsafe_allow_html=True)
     pivot_rows_selected = st.multiselect("Select row fields", options=pivot_cols_available, default=['LOB'], key="pivot_rows", label_visibility="collapsed")
+    st.markdown('</div>', unsafe_allow_html=True)
 with pc2:
-    st.markdown("**📈 Columns**")
+    st.markdown('<div class="pivot-box"><div class="pivot-box-label">📈 Columns</div>', unsafe_allow_html=True)
     pivot_columns = st.multiselect("Select column fields", options=pivot_cols_available, default=['Year'], key="pivot_columns", label_visibility="collapsed")
+    st.markdown('</div>', unsafe_allow_html=True)
 with pc3:
-    st.markdown("**🔢 Values**")
+    st.markdown('<div class="pivot-box"><div class="pivot-box-label">🔢 Values</div>', unsafe_allow_html=True)
     pivot_value = st.selectbox("Select value", options=['Case Count'] + value_cols_available, index=0, key="pivot_value", label_visibility="collapsed")
+    st.markdown('</div>', unsafe_allow_html=True)
 with pc4:
-    st.markdown("**⚙️ Aggregation**")
+    st.markdown('<div class="pivot-box"><div class="pivot-box-label">⚙️ Aggregation</div>', unsafe_allow_html=True)
     pivot_agg = st.selectbox("Select aggregation", options=['Count', 'Sum', 'Mean', 'Median', 'Min', 'Max'], index=0, key="pivot_agg", label_visibility="collapsed")
-st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # Row field reordering with drag and drop
 pivot_rows = list(pivot_rows_selected) if pivot_rows_selected else []
@@ -1004,6 +1017,66 @@ if pivot_rows or pivot_columns:
         st.error(f"Pivot table error: {e}")
 else:
     st.info("Select at least one Row or Column dimension to build the pivot table.")
+
+# ============================================================================
+# FILTERS – UI Section (above Cost Analysis)
+# ============================================================================
+st.markdown('<div class="section-header">🔍 Data Filters</div>', unsafe_allow_html=True)
+
+# Filter box styling
+st.markdown("""
+<style>
+    .filter-box {
+        background: white;
+        border: 1px solid #E2E8F0;
+        border-radius: 10px;
+        padding: 14px 16px;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+        margin-bottom: 8px;
+    }
+    .filter-box:hover {
+        border-color: #CBD5E0;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .filter-box-label {
+        font-size: 12px;
+        font-weight: 600;
+        color: #475569;
+        margin-bottom: 8px;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+with st.expander("📊 Filters", expanded=False):
+    fc1, fc2, fc3, fc4 = st.columns(4)
+    with fc1:
+        st.markdown('<div class="filter-box"><div class="filter-box-label">📅 Year</div>', unsafe_allow_html=True)
+        st.multiselect("Year", options=available_years, key="filter_year", label_visibility="collapsed")
+        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown('<div class="filter-box"><div class="filter-box-label">🔧 Service Type</div>', unsafe_allow_html=True)
+        st.multiselect("Service Type", options=['All'] + available_services, key="filter_service", label_visibility="collapsed")
+        st.markdown('</div>', unsafe_allow_html=True)
+    with fc2:
+        st.markdown('<div class="filter-box"><div class="filter-box-label">📋 LOB</div>', unsafe_allow_html=True)
+        st.multiselect("LOB", options=['All'] + available_lobs, key="filter_lob", label_visibility="collapsed")
+        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown('<div class="filter-box"><div class="filter-box-label">📆 Month</div>', unsafe_allow_html=True)
+        st.multiselect("Month", options=['All'] + month_options, key="filter_month", label_visibility="collapsed")
+        st.markdown('</div>', unsafe_allow_html=True)
+    with fc3:
+        st.markdown('<div class="filter-box"><div class="filter-box-label">📡 Channel</div>', unsafe_allow_html=True)
+        st.multiselect("Channel", options=['All'] + available_channels, key="filter_channel", label_visibility="collapsed")
+        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown('<div class="filter-box"><div class="filter-box-label">📍 Region</div>', unsafe_allow_html=True)
+        st.multiselect("Region", options=['All'] + available_regions, key="filter_region", label_visibility="collapsed")
+        st.markdown('</div>', unsafe_allow_html=True)
+    with fc4:
+        st.markdown('<div class="filter-box"><div class="filter-box-label">🚗 Vehicle Make</div>', unsafe_allow_html=True)
+        st.multiselect("Vehicle Make", options=['All'] + available_makes, key="filter_make", label_visibility="collapsed")
+        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown('<div class="filter-box"><div class="filter-box-label">🚙 Vehicle Model</div>', unsafe_allow_html=True)
+        st.multiselect("Vehicle Model", options=['All'] + available_models, key="filter_model", label_visibility="collapsed")
+        st.markdown('</div>', unsafe_allow_html=True)
 
 # ============================================================================
 # COST ANALYSIS
