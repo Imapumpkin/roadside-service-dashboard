@@ -8,6 +8,13 @@ import html
 import re
 from io import BytesIO
 
+# Try to import streamlit-sortables for drag-drop reordering
+try:
+    from streamlit_sortables import sort_items
+    SORTABLES_AVAILABLE = True
+except ImportError:
+    SORTABLES_AVAILABLE = False
+
 # ============================================================================
 # CONFIGURATION
 # ============================================================================
@@ -723,19 +730,59 @@ st.markdown(f"""
 # ============================================================================
 st.markdown('<div class="section-header">📋 Service Utilization – Interactive Pivot Table</div>', unsafe_allow_html=True)
 
-# --- Pivot table controls ---
+# --- Pivot table controls with styled boxes ---
 pivot_cols_available = [c for c in ['LOB', 'ประเภทการบริการ', 'Year', 'Month', 'จังหวัด', 'ยี่ห้อรถ', 'รุ่นรถ', 'Policy Type', 'รหัสโครงการ', 'แผนก'] if c in filtered_df.columns]
 value_cols_available = [c for c in ['Fee (Baht)', 'ลูกค้าจ่ายส่วนต่าง'] if c in filtered_df.columns]
 
+# Styled control boxes
+st.markdown("""
+<style>
+    .pivot-control-box {
+        background: white;
+        border: 1px solid #E2E8F0;
+        border-radius: 8px;
+        padding: 12px 16px;
+        margin-bottom: 8px;
+    }
+    .pivot-control-label {
+        font-size: 12px;
+        font-weight: 600;
+        color: #4A5568;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 8px;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 pc1, pc2, pc3, pc4 = st.columns(4)
 with pc1:
-    pivot_rows = st.multiselect("Rows", options=pivot_cols_available, default=['LOB'], key="pivot_rows")
+    st.markdown('<div class="pivot-control-box"><div class="pivot-control-label">📊 Rows</div></div>', unsafe_allow_html=True)
+    pivot_rows_selected = st.multiselect("Select row fields", options=pivot_cols_available, default=['LOB'], key="pivot_rows", label_visibility="collapsed")
 with pc2:
-    pivot_columns = st.multiselect("Columns", options=pivot_cols_available, default=['Year'], key="pivot_columns")
+    st.markdown('<div class="pivot-control-box"><div class="pivot-control-label">📈 Columns</div></div>', unsafe_allow_html=True)
+    pivot_columns = st.multiselect("Select column fields", options=pivot_cols_available, default=['Year'], key="pivot_columns", label_visibility="collapsed")
 with pc3:
-    pivot_value = st.selectbox("Values", options=['Case Count'] + value_cols_available, index=0, key="pivot_value")
+    st.markdown('<div class="pivot-control-box"><div class="pivot-control-label">🔢 Values</div></div>', unsafe_allow_html=True)
+    pivot_value = st.selectbox("Select value", options=['Case Count'] + value_cols_available, index=0, key="pivot_value", label_visibility="collapsed")
 with pc4:
-    pivot_agg = st.selectbox("Aggregation", options=['Count', 'Sum', 'Mean', 'Median', 'Min', 'Max'], index=0, key="pivot_agg")
+    st.markdown('<div class="pivot-control-box"><div class="pivot-control-label">⚙️ Aggregation</div></div>', unsafe_allow_html=True)
+    pivot_agg = st.selectbox("Select aggregation", options=['Count', 'Sum', 'Mean', 'Median', 'Min', 'Max'], index=0, key="pivot_agg", label_visibility="collapsed")
+
+# Row field reordering with drag and drop
+pivot_rows = pivot_rows_selected.copy()
+if len(pivot_rows_selected) > 1:
+    if SORTABLES_AVAILABLE:
+        st.markdown("""
+        <div style="background:#F7FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:12px 16px;margin:12px 0;">
+            <div style="font-size:12px;font-weight:600;color:#4A5568;margin-bottom:8px;">↔️ DRAG TO REORDER ROW FIELDS</div>
+        </div>
+        """, unsafe_allow_html=True)
+        pivot_rows = sort_items(pivot_rows_selected, direction="horizontal", key="pivot_row_sort")
+    else:
+        # Fallback: show message to install streamlit-sortables
+        st.info("💡 Install `streamlit-sortables` for drag-drop reordering: `pip install streamlit-sortables`")
+        st.markdown("**Current row order:** " + " → ".join(pivot_rows_selected))
 
 if pivot_rows or pivot_columns:
     try:
@@ -858,12 +905,26 @@ if pivot_rows or pivot_columns:
             if col_max > global_max:
                 global_max = col_max
 
-        # Display data rows with data bars via HTML table
+        # Build Grand Total row data if not already present
+        if len(grand_total_rows) == 0 and len(data_rows) > 0 and num_cols_list:
+            gt_row_data = {}
+            for col in data_rows.columns:
+                if col in num_cols_list:
+                    gt_row_data[col] = data_rows[col].sum()
+                elif col in row_id_cols:
+                    gt_row_data[col] = "Grand Total" if data_rows.columns.get_loc(col) == 0 else ""
+                else:
+                    gt_row_data[col] = ""
+            grand_total_rows = pd.DataFrame([gt_row_data])
+
+        # Display pivot table with Grand Total row inside
         if len(data_rows) > 0:
             pivot_html = '<div class="service-table-container" style="max-height:500px;overflow-y:auto;"><table class="service-table"><thead><tr>'
             for col in data_rows.columns:
                 pivot_html += f'<th>{html.escape(str(col))}</th>'
             pivot_html += '</tr></thead><tbody>'
+
+            # Data rows with data bars
             for _, row in data_rows.iterrows():
                 pivot_html += '<tr>'
                 for col in data_rows.columns:
@@ -887,44 +948,27 @@ if pivot_rows or pivot_columns:
                         cell_text = html.escape(str(val))
                         pivot_html += f'<td style="padding:8px 12px;">{cell_text}</td>'
                 pivot_html += '</tr>'
-            pivot_html += '</tbody></table></div>'
-            st.markdown(pivot_html, unsafe_allow_html=True)
 
-        # Display grand total row at the bottom
-        if len(grand_total_rows) > 0:
-            gt_html = '<div style="background:linear-gradient(135deg,#1B2838,#2A3F54);border-radius:0 0 8px 8px;margin-top:0;">'
-            gt_html += '<table class="service-table" style="width:100%;color:white;font-weight:600;font-size:13px;border:none;border-collapse:collapse;"><tr>'
-            for col in grand_total_rows.columns:
-                val = grand_total_rows[col].iloc[0]
-                if isinstance(val, (int, float)):
-                    if is_int_agg:
-                        display_val = f"{int(val):,}"
-                    else:
-                        display_val = f"{val:,.2f}"
-                else:
-                    display_val = html.escape(str(val))
-                gt_html += f'<td style="padding:8px 12px;border:none;color:white;">{display_val}</td>'
-            gt_html += '</tr></table></div>'
-            st.markdown(gt_html, unsafe_allow_html=True)
-        else:
-            # If no grand total row was found, create one from the data
-            if len(data_rows) > 0 and num_cols_list:
-                gt_html = '<div style="background:linear-gradient(135deg,#1B2838,#2A3F54);border-radius:0 0 8px 8px;margin-top:0;">'
-                gt_html += '<table class="service-table" style="width:100%;color:white;font-weight:600;font-size:13px;border:none;border-collapse:collapse;"><tr>'
+            # Grand Total row inside the table - light gray background, black text
+            if len(grand_total_rows) > 0:
+                pivot_html += '<tr>'
                 for col in data_rows.columns:
-                    if col in num_cols_list:
-                        total_val = data_rows[col].sum()
-                        if is_int_agg:
-                            display_val = f"{int(total_val):,}"
+                    if col in grand_total_rows.columns:
+                        val = grand_total_rows[col].iloc[0]
+                        if isinstance(val, (int, float)) and col in num_cols_list:
+                            if is_int_agg:
+                                display_val = f"{int(val):,}"
+                            else:
+                                display_val = f"{val:,.2f}"
                         else:
-                            display_val = f"{total_val:,.2f}"
-                    elif col in row_id_cols and data_rows.columns.get_loc(col) == 0:
-                        display_val = "Grand Total"
+                            display_val = html.escape(str(val)) if val else ""
                     else:
                         display_val = ""
-                    gt_html += f'<td style="padding:8px 12px;border:none;color:white;">{display_val}</td>'
-                gt_html += '</tr></table></div>'
-                st.markdown(gt_html, unsafe_allow_html=True)
+                    pivot_html += f'<td style="background-color:#E2E8F0;color:#1B2838;font-weight:600;padding:8px 12px;border-top:2px solid #CBD5E0;">{display_val}</td>'
+                pivot_html += '</tr>'
+
+            pivot_html += '</tbody></table></div>'
+            st.markdown(pivot_html, unsafe_allow_html=True)
 
         # Download pivot (full data including grand total)
         csv_pivot = fmt_pivot.to_csv(index=False, encoding='utf-8-sig').encode('utf-8-sig')
