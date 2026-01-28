@@ -734,54 +734,80 @@ st.markdown('<div class="section-header">📋 Service Utilization – Interactiv
 pivot_cols_available = [c for c in ['LOB', 'ประเภทการบริการ', 'Year', 'Month', 'จังหวัด', 'ยี่ห้อรถ', 'รุ่นรถ', 'Policy Type', 'รหัสโครงการ', 'แผนก'] if c in filtered_df.columns]
 value_cols_available = [c for c in ['Fee (Baht)', 'ลูกค้าจ่ายส่วนต่าง'] if c in filtered_df.columns]
 
-# Styled control boxes
+# Styled control boxes CSS - seamless boxes around dropdowns
 st.markdown("""
 <style>
-    .pivot-control-box {
+    /* Pivot control container styling */
+    .pivot-controls-row [data-testid="column"] {
+        padding: 0 6px;
+    }
+    .pivot-controls-row [data-testid="column"] > div > div {
         background: white;
         border: 1px solid #E2E8F0;
-        border-radius: 8px;
-        padding: 12px 16px;
-        margin-bottom: 8px;
+        border-radius: 10px;
+        padding: 14px 16px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        transition: all 0.2s ease;
     }
-    .pivot-control-label {
-        font-size: 12px;
+    .pivot-controls-row [data-testid="column"] > div > div:hover {
+        border-color: #CBD5E0;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    /* Dropdown/multiselect styling inside boxes */
+    .pivot-controls-row [data-baseweb="select"] {
+        background: #F8FAFC;
+        border-radius: 6px;
+    }
+    .pivot-controls-row [data-baseweb="select"]:hover {
+        background: #F1F5F9;
+    }
+    /* Row reorder section */
+    .row-reorder-box {
+        background: linear-gradient(135deg, #F8FAFC 0%, #EDF2F7 100%);
+        border: 1px dashed #CBD5E0;
+        border-radius: 10px;
+        padding: 14px 20px;
+        margin: 16px 0;
+    }
+    .row-reorder-label {
+        font-size: 11px;
         font-weight: 600;
-        color: #4A5568;
+        color: #64748B;
         text-transform: uppercase;
         letter-spacing: 0.05em;
-        margin-bottom: 8px;
+        margin-bottom: 10px;
     }
 </style>
 """, unsafe_allow_html=True)
 
+# Wrap controls in a container for styling
+st.markdown('<div class="pivot-controls-row">', unsafe_allow_html=True)
 pc1, pc2, pc3, pc4 = st.columns(4)
 with pc1:
-    st.markdown('<div class="pivot-control-box"><div class="pivot-control-label">📊 Rows</div></div>', unsafe_allow_html=True)
+    st.markdown("**📊 Rows**")
     pivot_rows_selected = st.multiselect("Select row fields", options=pivot_cols_available, default=['LOB'], key="pivot_rows", label_visibility="collapsed")
 with pc2:
-    st.markdown('<div class="pivot-control-box"><div class="pivot-control-label">📈 Columns</div></div>', unsafe_allow_html=True)
+    st.markdown("**📈 Columns**")
     pivot_columns = st.multiselect("Select column fields", options=pivot_cols_available, default=['Year'], key="pivot_columns", label_visibility="collapsed")
 with pc3:
-    st.markdown('<div class="pivot-control-box"><div class="pivot-control-label">🔢 Values</div></div>', unsafe_allow_html=True)
+    st.markdown("**🔢 Values**")
     pivot_value = st.selectbox("Select value", options=['Case Count'] + value_cols_available, index=0, key="pivot_value", label_visibility="collapsed")
 with pc4:
-    st.markdown('<div class="pivot-control-box"><div class="pivot-control-label">⚙️ Aggregation</div></div>', unsafe_allow_html=True)
+    st.markdown("**⚙️ Aggregation**")
     pivot_agg = st.selectbox("Select aggregation", options=['Count', 'Sum', 'Mean', 'Median', 'Min', 'Max'], index=0, key="pivot_agg", label_visibility="collapsed")
+st.markdown('</div>', unsafe_allow_html=True)
 
 # Row field reordering with drag and drop
-pivot_rows = pivot_rows_selected.copy()
+pivot_rows = list(pivot_rows_selected) if pivot_rows_selected else []
 if len(pivot_rows_selected) > 1:
     if SORTABLES_AVAILABLE:
-        st.markdown("""
-        <div style="background:#F7FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:12px 16px;margin:12px 0;">
-            <div style="font-size:12px;font-weight:600;color:#4A5568;margin-bottom:8px;">↔️ DRAG TO REORDER ROW FIELDS</div>
-        </div>
-        """, unsafe_allow_html=True)
-        pivot_rows = sort_items(pivot_rows_selected, direction="horizontal", key="pivot_row_sort")
+        st.markdown('<div class="row-reorder-box">', unsafe_allow_html=True)
+        st.markdown('<div class="row-reorder-label">↔️ Drag to reorder row fields</div>', unsafe_allow_html=True)
+        pivot_rows = sort_items(list(pivot_rows_selected), direction="horizontal", key="pivot_row_sort")
+        st.markdown('</div>', unsafe_allow_html=True)
     else:
         # Fallback: show message to install streamlit-sortables
-        st.info("💡 Install `streamlit-sortables` for drag-drop reordering: `pip install streamlit-sortables`")
+        st.info("Install `streamlit-sortables` for drag-drop reordering: `pip install streamlit-sortables`")
         st.markdown("**Current row order:** " + " → ".join(pivot_rows_selected))
 
 if pivot_rows or pivot_columns:
