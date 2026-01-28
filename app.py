@@ -624,51 +624,47 @@ prev_year = current_year - 1
 cur_df = filtered_df[filtered_df['Year'] == current_year]
 prev_df = filtered_df[filtered_df['Year'] == prev_year]
 
-# Current year metrics
-cur_cases = len(cur_df)
+# Current & previous year fee totals (used by portfolio health)
 cur_fee = cur_df['Fee (Baht)'].sum()
+prev_fee = prev_df['Fee (Baht)'].sum()
+
+current_month = datetime.now().month
+
+# YTD = full year-to-date for current year
+ytd_cases = len(cur_df)
+ytd_fee = cur_df['Fee (Baht)'].sum()
+prev_ytd_cases = len(prev_df[prev_df['Month'] <= current_month])
+prev_ytd_fee = prev_df[prev_df['Month'] <= current_month]['Fee (Baht)'].sum()
+
+# MTD = current month only
+mtd_fee = cur_df[cur_df['Month'] == current_month]['Fee (Baht)'].sum()
+mtd_util = (mtd_fee / MONTHLY_BUDGET * 100) if MONTHLY_BUDGET > 0 else 0
+prev_mtd_fee = prev_df[prev_df['Month'] == current_month]['Fee (Baht)'].sum()
+
+# Avg fee current year
 cur_avg_raw = cur_df['Fee (Baht)'].mean()
 cur_avg = 0.0 if pd.isna(cur_avg_raw) else cur_avg_raw
-
-# Previous year metrics
-prev_cases = len(prev_df)
-prev_fee = prev_df['Fee (Baht)'].sum()
 prev_avg_raw = prev_df['Fee (Baht)'].mean()
 prev_avg = 0.0 if pd.isna(prev_avg_raw) else prev_avg_raw
 
-current_month = datetime.now().month
-ytd_actual = cur_df[cur_df['Month'] <= current_month]['Fee (Baht)'].sum()
-ytd_expected = MONTHLY_BUDGET * current_month
-ytd_util = (ytd_actual / ytd_expected * 100) if ytd_expected > 0 else 0
-prev_ytd_actual = prev_df[prev_df['Month'] <= current_month]['Fee (Baht)'].sum()
-
-def yoy_html(cur_val, prev_val):
+def yoy_html(cur_val, prev_val, compare_year):
     """Generate YoY comparison HTML snippet. Cost increase = bad (red), decrease = good (green)."""
     if prev_val == 0:
-        return f'<div style="font-size:11px;margin-top:8px;opacity:0.8;">vs {prev_year}: N/A</div>'
+        return f'<div style="font-size:11px;margin-top:8px;opacity:0.8;">vs {compare_year}: N/A</div>'
     pct = (cur_val - prev_val) / prev_val * 100
-    # For cost: increase is negative(bad), decrease is positive(good)
     cls = "negative" if pct > 0 else "positive"
     arrow = "▲" if pct >= 0 else "▼"
-    return f'<div style="font-size:11px;margin-top:8px;opacity:0.9;"><span class="{cls}">{arrow} {abs(pct):.1f}%</span> vs {prev_year}</div>'
+    return f'<div style="font-size:11px;margin-top:8px;opacity:0.9;"><span class="{cls}">{arrow} {abs(pct):.1f}%</span> vs {compare_year}</div>'
 
-def yoy_html_cases(cur_val, prev_val):
-    """Generate YoY for cases - increase is neutral, just informational."""
-    if prev_val == 0:
-        return f'<div style="font-size:11px;margin-top:8px;opacity:0.8;">vs {prev_year}: N/A</div>'
-    pct = (cur_val - prev_val) / prev_val * 100
-    arrow = "▲" if pct >= 0 else "▼"
-    return f'<div style="font-size:11px;margin-top:8px;opacity:0.9;">{arrow} {abs(pct):.1f}% vs {prev_year}</div>'
-
-yc = "negative" if ytd_util > 100 else "positive"
+mc = "negative" if mtd_util > 100 else "positive"
 
 kpi_cards = [
-    (f"Total Cases ({current_year})", f"{cur_cases:,}", yoy_html_cases(cur_cases, prev_cases)),
-    (f"Total Fee ({current_year})", f"฿{cur_fee:,.0f}", yoy_html(cur_fee, prev_fee)),
-    (f"Avg Fee/Case ({current_year})", f"฿{cur_avg:,.0f}", yoy_html(cur_avg, prev_avg)),
+    (f"YTD Total Cases ({current_year})", f"{ytd_cases:,}", yoy_html(ytd_cases, prev_ytd_cases, prev_year)),
+    (f"YTD Total Fee ({current_year})", f"฿{ytd_fee:,.0f}", yoy_html(ytd_fee, prev_ytd_fee, prev_year)),
+    (f"Avg Fee/Case ({current_year})", f"฿{cur_avg:,.0f}", yoy_html(cur_avg, prev_avg, prev_year)),
     ("Monthly Budget", f"฿{MONTHLY_BUDGET:,}", f'<div style="font-size:11px;margin-top:8px;opacity:0.8;">Annual: ฿{MONTHLY_BUDGET * 12:,}</div>'),
-    ("YTD Budget Utilization", f'<span class="{yc}">{ytd_util:.1f}%</span>', f'<div style="font-size:11px;margin-top:8px;opacity:0.8;">฿{ytd_actual:,.0f} / ฿{ytd_expected:,.0f}</div>'),
-    (f"YTD Actual ({current_year})", f"฿{ytd_actual:,.0f}", yoy_html(ytd_actual, prev_ytd_actual)),
+    ("MTD Utilization", f'<span class="{mc}">{mtd_util:.1f}%</span>', f'<div style="font-size:11px;margin-top:8px;opacity:0.8;">฿{mtd_fee:,.0f} / ฿{MONTHLY_BUDGET:,}</div>'),
+    (f"MTD Fee ({current_year})", f"฿{mtd_fee:,.0f}", yoy_html(mtd_fee, prev_mtd_fee, prev_year)),
 ]
 
 kpi_html = '<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:16px;">'
@@ -684,14 +680,16 @@ st.markdown('<div class="section-header">🏥 Portfolio Health Indicator</div>',
 
 months_in_year = cur_df['Month'].nunique() if len(cur_df) > 0 else 1
 run_rate = cur_fee / max(months_in_year, 1)
-var_pct = ((run_rate - MONTHLY_BUDGET) / MONTHLY_BUDGET * 100) if MONTHLY_BUDGET > 0 else 0
-var_amt = run_rate - MONTHLY_BUDGET
+budget_left_amt = MONTHLY_BUDGET - run_rate
+budget_left_pct = (budget_left_amt / MONTHLY_BUDGET * 100) if MONTHLY_BUDGET > 0 else 0
 projection = run_rate * 12
 
-# var_pct negative = under budget (good), positive = over budget (bad)
-if var_pct <= HEALTH_THRESHOLD_HEALTHY:
+# budget_left_pct positive = under budget (good), negative = over budget (bad)
+# Use negative of budget_left to check: over budget = bad
+over_budget_pct = -budget_left_pct  # positive means over budget
+if over_budget_pct <= HEALTH_THRESHOLD_HEALTHY:
     h_status, h_class, h_badge = "HEALTHY", "health-healthy", '<span class="health-badge badge-healthy">Healthy</span>'
-elif var_pct <= HEALTH_THRESHOLD_WARNING:
+elif over_budget_pct <= HEALTH_THRESHOLD_WARNING:
     h_status, h_class, h_badge = "WARNING", "health-warning", '<span class="health-badge badge-warning">Warning</span>'
 else:
     h_status, h_class, h_badge = "CRITICAL", "health-critical", '<span class="health-badge badge-critical">Critical</span>'
@@ -701,7 +699,7 @@ st.markdown(f"""
     <div class="health-title">{h_badge} Portfolio Status: {h_status}</div>
     <div class="health-stats">
         <div class="health-stat-item"><div class="health-stat-label">Monthly Run Rate</div><div class="health-stat-value">฿{run_rate:,.0f}</div></div>
-        <div class="health-stat-item"><div class="health-stat-label">Variance from Budget</div><div class="health-stat-value">{var_pct:+.2f}% (฿{var_amt:+,.0f})</div></div>
+        <div class="health-stat-item"><div class="health-stat-label">Budget Left</div><div class="health-stat-value">฿{budget_left_amt:+,.0f} ({budget_left_pct:+.2f}%)</div></div>
         <div class="health-stat-item"><div class="health-stat-label">Year-End Projection</div><div class="health-stat-value">฿{projection:,.0f}</div></div>
         <div class="health-stat-item"><div class="health-stat-label">Annual Budget</div><div class="health-stat-value">฿{MONTHLY_BUDGET * 12:,.0f}</div></div>
     </div>
@@ -782,6 +780,8 @@ if pivot_rows or pivot_columns:
             if pivot_agg in ('Sum', 'Count'):
                 fmt_pivot[col] = fmt_pivot[col].astype(int)
 
+        is_int_agg = pivot_agg in ('Sum', 'Count')
+
         # Separate grand total row from data rows so sorting won't move it
         gt_label = 'Grand Total'
         row_id_cols = [c for c in fmt_pivot.columns if c in pivot_rows]
@@ -793,26 +793,44 @@ if pivot_rows or pivot_columns:
         data_rows = fmt_pivot[~gt_mask].reset_index(drop=True)
         grand_total_rows = fmt_pivot[gt_mask].reset_index(drop=True)
 
-        # Display data rows (sortable by user) with comma-formatted numbers
+        # Display data rows with comma-formatted numbers via HTML table
         if len(data_rows) > 0:
-            display_rows = data_rows.copy()
-            num_cols = display_rows.select_dtypes(include=['int64', 'int32', 'float64', 'float32']).columns
-            col_config = {}
-            for nc in num_cols:
-                col_config[nc] = st.column_config.NumberColumn(nc, format="%,.0f" if display_rows[nc].dtype in ['int64', 'int32'] else "%,.2f")
-            st.dataframe(display_rows, use_container_width=True, height=min(len(display_rows) * 35 + 45, 550), hide_index=True, column_config=col_config)
+            num_cols_set = set(data_rows.select_dtypes(include=['int64', 'int32', 'float64', 'float32']).columns)
 
-        # Display grand total as a static, bold HTML row below
+            pivot_html = '<div class="service-table-container"><table class="service-table"><thead><tr>'
+            for col in data_rows.columns:
+                pivot_html += f'<th>{html.escape(str(col))}</th>'
+            pivot_html += '</tr></thead><tbody>'
+            for _, row in data_rows.iterrows():
+                pivot_html += '<tr>'
+                for col in data_rows.columns:
+                    val = row[col]
+                    if col in num_cols_set:
+                        if is_int_agg:
+                            cell = f"{int(val):,}"
+                        else:
+                            cell = f"{val:,.2f}"
+                    else:
+                        cell = html.escape(str(val))
+                    pivot_html += f'<td>{cell}</td>'
+                pivot_html += '</tr>'
+            pivot_html += '</tbody></table></div>'
+            st.markdown(pivot_html, unsafe_allow_html=True)
+
+        # Display grand total as a compact static row below
         if len(grand_total_rows) > 0:
-            gt_html = '<div style="background:linear-gradient(135deg,#1B2838,#2A3F54);border-radius:0 0 8px 8px;padding:2px 16px;margin-top:-16px;line-height:1.4;">'
-            gt_html += '<table style="width:100%;color:white;font-weight:600;font-size:13px;border:none;border-collapse:collapse;"><tr>'
+            gt_html = '<div style="background:linear-gradient(135deg,#1B2838,#2A3F54);border-radius:0 0 8px 8px;padding:0 0;margin-top:0;line-height:1.2;">'
+            gt_html += '<table style="width:100%;color:white;font-weight:600;font-size:12px;border:none;border-collapse:collapse;text-align:left;"><tr>'
             for col in grand_total_rows.columns:
                 val = grand_total_rows[col].iloc[0]
                 if isinstance(val, (int, float)):
-                    display_val = f"{val:,.0f}" if isinstance(val, float) else f"{val:,}"
+                    if is_int_agg:
+                        display_val = f"{int(val):,}"
+                    else:
+                        display_val = f"{val:,.2f}"
                 else:
-                    display_val = str(val)
-                gt_html += f'<td style="padding:2px 12px;border:none;">{display_val}</td>'
+                    display_val = html.escape(str(val))
+                gt_html += f'<td style="padding:4px 16px;border:none;text-align:left;">{display_val}</td>'
             gt_html += '</tr></table></div>'
             st.markdown(gt_html, unsafe_allow_html=True)
 
