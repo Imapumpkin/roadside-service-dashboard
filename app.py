@@ -255,9 +255,11 @@ st.markdown("""
         .bar-cell { min-width: auto; }
     }
     @media (max-width: 1200px) {
+        div[style*="grid-template-columns:repeat(5"] { grid-template-columns: repeat(3, 1fr) !important; }
         div[style*="grid-template-columns:repeat(6"] { grid-template-columns: repeat(3, 1fr) !important; }
     }
     @media (max-width: 768px) {
+        div[style*="grid-template-columns:repeat(5"] { grid-template-columns: repeat(2, 1fr) !important; }
         div[style*="grid-template-columns:repeat(6"] { grid-template-columns: repeat(2, 1fr) !important; }
     }
 </style>
@@ -525,34 +527,35 @@ def convert_df_to_csv(_df):
 
 
 # ============================================================================
-# FILTERS – compact expander at the top of the main area
+# FILTERS – static at top of page
 # ============================================================================
-with st.expander("📊 Filters", expanded=False):
-    fc1, fc2, fc3, fc4 = st.columns(4)
+st.markdown('<div class="section-header" style="margin-top:0;">📊 Filters</div>', unsafe_allow_html=True)
+fc1, fc2, fc3, fc4 = st.columns(4)
 
-    available_years = sorted([int(y) for y in df['Year'].dropna().unique()])
-    available_services = safe_sorted_unique(df['ประเภทการบริการ'])
-    available_lobs = safe_sorted_unique(df['LOB'])
-    month_names = {1:'Jan',2:'Feb',3:'Mar',4:'Apr',5:'May',6:'Jun',7:'Jul',8:'Aug',9:'Sep',10:'Oct',11:'Nov',12:'Dec'}
-    available_months = sorted([int(m) for m in df['Month'].dropna().unique()])
-    month_options = [f"{m} - {month_names.get(m,'')}" for m in available_months]
-    available_channels = safe_sorted_unique(df['รหัสโครงการ']) if 'รหัสโครงการ' in df.columns else []
-    available_regions = safe_sorted_unique(df['จังหวัด']) if 'จังหวัด' in df.columns else []
-    available_makes = safe_sorted_unique(df['ยี่ห้อรถ']) if 'ยี่ห้อรถ' in df.columns else []
-    available_models = safe_sorted_unique(df['รุ่นรถ']) if 'รุ่นรถ' in df.columns else []
+available_years = sorted([int(y) for y in df['Year'].dropna().unique()])
+available_services = safe_sorted_unique(df['ประเภทการบริการ'])
+available_lobs = safe_sorted_unique(df['LOB'])
+month_names = {1:'Jan',2:'Feb',3:'Mar',4:'Apr',5:'May',6:'Jun',7:'Jul',8:'Aug',9:'Sep',10:'Oct',11:'Nov',12:'Dec'}
+available_months = sorted([int(m) for m in df['Month'].dropna().unique()])
+month_options = [f"{m} - {month_names.get(m,'')}" for m in available_months]
+available_channels = safe_sorted_unique(df['รหัสโครงการ']) if 'รหัสโครงการ' in df.columns else []
+available_regions = safe_sorted_unique(df['จังหวัด']) if 'จังหวัด' in df.columns else []
+available_makes = safe_sorted_unique(df['ยี่ห้อรถ']) if 'ยี่ห้อรถ' in df.columns else []
+available_models = safe_sorted_unique(df['รุ่นรถ']) if 'รุ่นรถ' in df.columns else []
 
-    with fc1:
-        selected_years = st.multiselect("Year", options=available_years, default=available_years, key="filter_year")
-        selected_services = st.multiselect("Service Type", options=['All'] + available_services, default=['All'], key="filter_service")
-    with fc2:
-        selected_lobs = st.multiselect("LOB", options=['All'] + available_lobs, default=['All'], key="filter_lob")
-        selected_month_display = st.multiselect("Month", options=['All'] + month_options, default=['All'], key="filter_month")
-    with fc3:
-        selected_channels = st.multiselect("Channel", options=['All'] + available_channels, default=['All'], key="filter_channel")
-        selected_regions = st.multiselect("Region", options=['All'] + available_regions, default=['All'], key="filter_region")
-    with fc4:
-        selected_makes = st.multiselect("Vehicle Make", options=['All'] + available_makes, default=['All'], key="filter_make")
-        selected_models = st.multiselect("Vehicle Model", options=['All'] + available_models, default=['All'], key="filter_model")
+with fc1:
+    selected_years = st.multiselect("Year", options=available_years, default=available_years, key="filter_year")
+    selected_services = st.multiselect("Service Type", options=['All'] + available_services, default=['All'], key="filter_service")
+with fc2:
+    selected_lobs = st.multiselect("LOB", options=['All'] + available_lobs, default=['All'], key="filter_lob")
+    selected_month_display = st.multiselect("Month", options=['All'] + month_options, default=['All'], key="filter_month")
+with fc3:
+    selected_channels = st.multiselect("Channel", options=['All'] + available_channels, default=['All'], key="filter_channel")
+    selected_regions = st.multiselect("Region", options=['All'] + available_regions, default=['All'], key="filter_region")
+with fc4:
+    selected_makes = st.multiselect("Vehicle Make", options=['All'] + available_makes, default=['All'], key="filter_make")
+    selected_models = st.multiselect("Vehicle Model", options=['All'] + available_models, default=['All'], key="filter_model")
+st.markdown("---")
 
 if not selected_years:
     st.warning("Please select at least one year.")
@@ -662,12 +665,11 @@ kpi_cards = [
     (f"YTD Total Cases ({current_year})", f"{ytd_cases:,}", yoy_html(ytd_cases, prev_ytd_cases, prev_year)),
     (f"YTD Total Fee ({current_year})", f"฿{ytd_fee:,.0f}", yoy_html(ytd_fee, prev_ytd_fee, prev_year)),
     (f"Avg Fee/Case ({current_year})", f"฿{cur_avg:,.0f}", yoy_html(cur_avg, prev_avg, prev_year)),
-    ("Monthly Budget", f"฿{MONTHLY_BUDGET:,}", f'<div style="font-size:11px;margin-top:8px;opacity:0.8;">Annual: ฿{MONTHLY_BUDGET * 12:,}</div>'),
-    ("MTD Utilization", f'<span class="{mc}">{mtd_util:.1f}%</span>', f'<div style="font-size:11px;margin-top:8px;opacity:0.8;">฿{mtd_fee:,.0f} / ฿{MONTHLY_BUDGET:,}</div>'),
     (f"MTD Fee ({current_year})", f"฿{mtd_fee:,.0f}", yoy_html(mtd_fee, prev_mtd_fee, prev_year)),
+    ("MTD Utilization", f'<span class="{mc}">{mtd_util:.1f}%</span>', f'<div style="font-size:11px;margin-top:8px;opacity:0.8;">฿{mtd_fee:,.0f} / ฿{MONTHLY_BUDGET:,}</div>'),
 ]
 
-kpi_html = '<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:16px;">'
+kpi_html = '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px;">'
 for title, value, extra in kpi_cards:
     kpi_html += f'<div class="metric-card"><div class="metric-title">{title}</div><div class="metric-value">{value}</div>{extra}</div>'
 kpi_html += '</div>'
@@ -680,13 +682,12 @@ st.markdown('<div class="section-header">🏥 Portfolio Health Indicator</div>',
 
 months_in_year = cur_df['Month'].nunique() if len(cur_df) > 0 else 1
 run_rate = cur_fee / max(months_in_year, 1)
-budget_left_amt = MONTHLY_BUDGET - run_rate
-budget_left_pct = (budget_left_amt / MONTHLY_BUDGET * 100) if MONTHLY_BUDGET > 0 else 0
 projection = run_rate * 12
+annual_budget = MONTHLY_BUDGET * 12
+expected_cost_ytd = MONTHLY_BUDGET * months_in_year
 
-# budget_left_pct positive = under budget (good), negative = over budget (bad)
-# Use negative of budget_left to check: over budget = bad
-over_budget_pct = -budget_left_pct  # positive means over budget
+# Calculate over budget percentage for health status
+over_budget_pct = ((ytd_fee - expected_cost_ytd) / expected_cost_ytd * 100) if expected_cost_ytd > 0 else 0
 if over_budget_pct <= HEALTH_THRESHOLD_HEALTHY:
     h_status, h_class, h_badge = "HEALTHY", "health-healthy", '<span class="health-badge badge-healthy">Healthy</span>'
 elif over_budget_pct <= HEALTH_THRESHOLD_WARNING:
@@ -698,10 +699,9 @@ st.markdown(f"""
 <div class="health-indicator {h_class}">
     <div class="health-title">{h_badge} Portfolio Status: {h_status}</div>
     <div class="health-stats">
+        <div class="health-stat-item"><div class="health-stat-label">YTD Total Fee vs Expected Cost</div><div class="health-stat-value">฿{ytd_fee:,.0f} / ฿{expected_cost_ytd:,.0f}</div></div>
         <div class="health-stat-item"><div class="health-stat-label">Monthly Run Rate</div><div class="health-stat-value">฿{run_rate:,.0f}</div></div>
-        <div class="health-stat-item"><div class="health-stat-label">Budget Left</div><div class="health-stat-value">฿{budget_left_amt:+,.0f} ({budget_left_pct:+.2f}%)</div></div>
-        <div class="health-stat-item"><div class="health-stat-label">Year-End Projection</div><div class="health-stat-value">฿{projection:,.0f}</div></div>
-        <div class="health-stat-item"><div class="health-stat-label">Annual Budget</div><div class="health-stat-value">฿{MONTHLY_BUDGET * 12:,.0f}</div></div>
+        <div class="health-stat-item"><div class="health-stat-label">Year-End Projection vs Annual Budget</div><div class="health-stat-value">฿{projection:,.0f} / ฿{annual_budget:,.0f}</div></div>
     </div>
 </div>
 """, unsafe_allow_html=True)
@@ -763,6 +763,19 @@ if pivot_rows or pivot_columns:
 
         pivot_result = pd.pivot_table(**pivot_kwargs)
 
+        # Sort columns numerically if they are Month (1,2,3,4,5,6...)
+        if 'Month' in pivot_columns:
+            cols = list(pivot_result.columns)
+            gt_col = 'Grand Total' if 'Grand Total' in cols else None
+            non_gt_cols = [c for c in cols if c != gt_col]
+            try:
+                sorted_cols = sorted(non_gt_cols, key=lambda x: int(str(x)) if str(x).isdigit() else 9999)
+            except:
+                sorted_cols = non_gt_cols
+            if gt_col:
+                sorted_cols.append(gt_col)
+            pivot_result = pivot_result[sorted_cols]
+
         # Flatten multi-level column names
         if isinstance(pivot_result.columns, pd.MultiIndex):
             pivot_result.columns = [' | '.join(str(c) for c in col).strip(' | ') for col in pivot_result.columns]
@@ -793,11 +806,17 @@ if pivot_rows or pivot_columns:
         data_rows = fmt_pivot[~gt_mask].reset_index(drop=True)
         grand_total_rows = fmt_pivot[gt_mask].reset_index(drop=True)
 
-        # Display data rows with comma-formatted numbers via HTML table
-        if len(data_rows) > 0:
-            num_cols_set = set(data_rows.select_dtypes(include=['int64', 'int32', 'float64', 'float32']).columns)
+        # Find numeric columns for data bars and formatting
+        num_cols_list = list(data_rows.select_dtypes(include=['int64', 'int32', 'float64', 'float32']).columns)
 
-            pivot_html = '<div class="service-table-container"><table class="service-table"><thead><tr>'
+        # Calculate max values for data bars
+        max_vals = {}
+        for nc in num_cols_list:
+            max_vals[nc] = data_rows[nc].max() if data_rows[nc].max() > 0 else 1
+
+        # Display data rows with data bars via HTML table
+        if len(data_rows) > 0:
+            pivot_html = '<div class="service-table-container" style="max-height:500px;overflow-y:auto;"><table class="service-table"><thead><tr>'
             for col in data_rows.columns:
                 pivot_html += f'<th>{html.escape(str(col))}</th>'
             pivot_html += '</tr></thead><tbody>'
@@ -805,22 +824,28 @@ if pivot_rows or pivot_columns:
                 pivot_html += '<tr>'
                 for col in data_rows.columns:
                     val = row[col]
-                    if col in num_cols_set:
+                    if col in num_cols_list:
                         if is_int_agg:
-                            cell = f"{int(val):,}"
+                            cell_text = f"{int(val):,}"
                         else:
-                            cell = f"{val:,.2f}"
+                            cell_text = f"{val:,.2f}"
+                        # Data bar width percentage
+                        bar_pct = (val / max_vals[col] * 100) if max_vals[col] > 0 else 0
+                        pivot_html += f'''<td style="position:relative;padding:0;">
+                            <div style="position:absolute;top:0;left:0;height:100%;width:{bar_pct:.1f}%;background:linear-gradient(90deg,rgba(74,144,217,0.3),rgba(111,177,255,0.2));z-index:1;"></div>
+                            <div style="position:relative;z-index:2;padding:8px 12px;">{cell_text}</div>
+                        </td>'''
                     else:
-                        cell = html.escape(str(val))
-                    pivot_html += f'<td>{cell}</td>'
+                        cell_text = html.escape(str(val))
+                        pivot_html += f'<td style="padding:8px 12px;">{cell_text}</td>'
                 pivot_html += '</tr>'
             pivot_html += '</tbody></table></div>'
             st.markdown(pivot_html, unsafe_allow_html=True)
 
-        # Display grand total as a compact static row below
+        # Display grand total as a compact static row below, aligned with data columns
         if len(grand_total_rows) > 0:
-            gt_html = '<div style="background:linear-gradient(135deg,#1B2838,#2A3F54);border-radius:0 0 8px 8px;padding:0 0;margin-top:0;line-height:1.2;">'
-            gt_html += '<table style="width:100%;color:white;font-weight:600;font-size:12px;border:none;border-collapse:collapse;text-align:left;"><tr>'
+            gt_html = '<div style="background:linear-gradient(135deg,#1B2838,#2A3F54);border-radius:0 0 8px 8px;margin-top:0;">'
+            gt_html += '<table class="service-table" style="width:100%;color:white;font-weight:600;font-size:13px;border:none;border-collapse:collapse;"><tr>'
             for col in grand_total_rows.columns:
                 val = grand_total_rows[col].iloc[0]
                 if isinstance(val, (int, float)):
@@ -830,7 +855,7 @@ if pivot_rows or pivot_columns:
                         display_val = f"{val:,.2f}"
                 else:
                     display_val = html.escape(str(val))
-                gt_html += f'<td style="padding:4px 16px;border:none;text-align:left;">{display_val}</td>'
+                gt_html += f'<td style="padding:8px 12px;border:none;color:white;">{display_val}</td>'
             gt_html += '</tr></table></div>'
             st.markdown(gt_html, unsafe_allow_html=True)
 
