@@ -245,6 +245,13 @@ st.markdown("""
     /* Footer */
     .dashboard-footer { text-align: center; color: #718096; padding: 32px 20px; margin-top: 48px; border-top: 2px solid #E2E8F0; font-size: 13px; background: white; border-radius: 12px; }
 
+    /* Seamless Filter Expander */
+    .stExpander { border: none !important; box-shadow: none !important; background: transparent !important; }
+    .stExpander > details { border: 1px solid #E2E8F0 !important; border-radius: 8px !important; background: white !important; }
+    .stExpander > details > summary { padding: 12px 16px !important; font-weight: 600 !important; color: #1B2838 !important; font-size: 14px !important; }
+    .stExpander > details[open] > summary { border-bottom: 1px solid #E2E8F0 !important; }
+    .stExpander > details > div { padding: 16px !important; }
+
     /* Responsive */
     @media (max-width: 768px) {
         .metric-card { margin-bottom: 12px; }
@@ -527,11 +534,8 @@ def convert_df_to_csv(_df):
 
 
 # ============================================================================
-# FILTERS – static at top of page
+# FILTERS – collapsible, hidden by default
 # ============================================================================
-st.markdown('<div class="section-header" style="margin-top:0;">📊 Filters</div>', unsafe_allow_html=True)
-fc1, fc2, fc3, fc4 = st.columns(4)
-
 available_years = sorted([int(y) for y in df['Year'].dropna().unique()])
 available_services = safe_sorted_unique(df['ประเภทการบริการ'])
 available_lobs = safe_sorted_unique(df['LOB'])
@@ -543,19 +547,20 @@ available_regions = safe_sorted_unique(df['จังหวัด']) if 'จั�
 available_makes = safe_sorted_unique(df['ยี่ห้อรถ']) if 'ยี่ห้อรถ' in df.columns else []
 available_models = safe_sorted_unique(df['รุ่นรถ']) if 'รุ่นรถ' in df.columns else []
 
-with fc1:
-    selected_years = st.multiselect("Year", options=available_years, default=available_years, key="filter_year")
-    selected_services = st.multiselect("Service Type", options=['All'] + available_services, default=['All'], key="filter_service")
-with fc2:
-    selected_lobs = st.multiselect("LOB", options=['All'] + available_lobs, default=['All'], key="filter_lob")
-    selected_month_display = st.multiselect("Month", options=['All'] + month_options, default=['All'], key="filter_month")
-with fc3:
-    selected_channels = st.multiselect("Channel", options=['All'] + available_channels, default=['All'], key="filter_channel")
-    selected_regions = st.multiselect("Region", options=['All'] + available_regions, default=['All'], key="filter_region")
-with fc4:
-    selected_makes = st.multiselect("Vehicle Make", options=['All'] + available_makes, default=['All'], key="filter_make")
-    selected_models = st.multiselect("Vehicle Model", options=['All'] + available_models, default=['All'], key="filter_model")
-st.markdown("---")
+with st.expander("📊 Filters", expanded=False):
+    fc1, fc2, fc3, fc4 = st.columns(4)
+    with fc1:
+        selected_years = st.multiselect("Year", options=available_years, default=available_years, key="filter_year")
+        selected_services = st.multiselect("Service Type", options=['All'] + available_services, default=['All'], key="filter_service")
+    with fc2:
+        selected_lobs = st.multiselect("LOB", options=['All'] + available_lobs, default=['All'], key="filter_lob")
+        selected_month_display = st.multiselect("Month", options=['All'] + month_options, default=['All'], key="filter_month")
+    with fc3:
+        selected_channels = st.multiselect("Channel", options=['All'] + available_channels, default=['All'], key="filter_channel")
+        selected_regions = st.multiselect("Region", options=['All'] + available_regions, default=['All'], key="filter_region")
+    with fc4:
+        selected_makes = st.multiselect("Vehicle Make", options=['All'] + available_makes, default=['All'], key="filter_make")
+        selected_models = st.multiselect("Vehicle Model", options=['All'] + available_models, default=['All'], key="filter_model")
 
 if not selected_years:
     st.warning("Please select at least one year.")
