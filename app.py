@@ -253,13 +253,18 @@ st.markdown("""
     /* Footer */
     .dashboard-footer { text-align: center; color: #718096; padding: 32px 20px; margin-top: 48px; border-top: 2px solid #E2E8F0; font-size: 13px; background: white; border-radius: 12px; }
 
-    /* Seamless Filter Expander - Sticky at top */
-    .filter-sticky-wrapper { position: sticky; top: 0; z-index: 999; background: #F0F2F6; padding: 8px 0 16px 0; }
+    /* Seamless Filter Expander */
     .stExpander { border: none !important; box-shadow: none !important; background: transparent !important; }
     .stExpander > details { border: 1px solid #E2E8F0 !important; border-radius: 8px !important; background: white !important; box-shadow: 0 2px 8px rgba(0,0,0,0.06) !important; }
     .stExpander > details > summary { padding: 12px 16px !important; font-weight: 600 !important; color: #1B2838 !important; font-size: 14px !important; }
     .stExpander > details[open] > summary { border-bottom: 1px solid #E2E8F0 !important; }
     .stExpander > details > div { padding: 16px !important; }
+
+    /* Compact checkboxes inside filter containers */
+    .stExpander .stCheckbox { margin-bottom: -10px; }
+    .stExpander .stCheckbox label { font-size: 13px !important; }
+    /* Bordered containers inside filters – scrollable when tall */
+    .stExpander [data-testid="stVerticalBlockBorderWrapper"] { max-height: 280px; overflow-y: auto; }
 
     /* Responsive */
     @media (max-width: 768px) {
@@ -556,71 +561,89 @@ available_regions = safe_sorted_unique(df['จังหวัด']) if 'จั�
 available_makes = safe_sorted_unique(df['ยี่ห้อรถ']) if 'ยี่ห้อรถ' in df.columns else []
 available_models = safe_sorted_unique(df['รุ่นรถ']) if 'รุ่นรถ' in df.columns else []
 
-# Initialize filter session state with defaults if not set
-if 'filter_year' not in st.session_state:
-    st.session_state.filter_year = available_years
-if 'filter_service' not in st.session_state:
-    st.session_state.filter_service = ['All']
-if 'filter_lob' not in st.session_state:
-    st.session_state.filter_lob = ['All']
-if 'filter_month' not in st.session_state:
-    st.session_state.filter_month = ['All']
-if 'filter_channel' not in st.session_state:
-    st.session_state.filter_channel = ['All']
-if 'filter_region' not in st.session_state:
-    st.session_state.filter_region = ['All']
-if 'filter_make' not in st.session_state:
-    st.session_state.filter_make = ['All']
-if 'filter_model' not in st.session_state:
-    st.session_state.filter_model = ['All']
+# ---- Checkbox-based filter helpers ----
+FILTER_GROUPS = {
+    'fy': available_years,
+    'fs': available_services,
+    'fl': available_lobs,
+    'fm': available_months,
+    'fc': available_channels,
+    'fr': available_regions,
+    'fmk': available_makes,
+    'fmd': available_models,
+}
 
-# Get current filter values from session state
-selected_years = st.session_state.filter_year if st.session_state.filter_year else available_years
-selected_services = st.session_state.filter_service
-selected_lobs = st.session_state.filter_lob
-selected_month_display = st.session_state.filter_month
-selected_channels = st.session_state.filter_channel
-selected_regions = st.session_state.filter_region
-selected_makes = st.session_state.filter_make
-selected_models = st.session_state.filter_model
+def _init_checkbox_group(prefix, options, default=True):
+    """Initialise session-state keys for a checkbox group (Select All + items)."""
+    all_key = f"{prefix}__all"
+    if all_key not in st.session_state:
+        st.session_state[all_key] = default
+    for opt in options:
+        k = f"{prefix}__{opt}"
+        if k not in st.session_state:
+            st.session_state[k] = default
+
+def _read_checkbox_group(prefix, options):
+    """Return list of checked items by reading session state."""
+    return [opt for opt in options if st.session_state.get(f"{prefix}__{opt}", True)]
+
+def _make_toggle_all(prefix, options):
+    """Return a callback that syncs individual checkboxes with Select All."""
+    def _cb():
+        val = st.session_state[f"{prefix}__all"]
+        for opt in options:
+            st.session_state[f"{prefix}__{opt}"] = val
+    return _cb
+
+def render_checkbox_group(label, options, prefix):
+    """Render Select All + individual checkboxes inside the current container."""
+    st.checkbox("Select All", key=f"{prefix}__all",
+                on_change=_make_toggle_all(prefix, options))
+    # Use 2 columns for compact layout when many options
+    if len(options) > 6:
+        cols = st.columns(2)
+        for i, opt in enumerate(options):
+            with cols[i % 2]:
+                st.checkbox(str(opt), key=f"{prefix}__{opt}")
+    else:
+        for opt in options:
+            st.checkbox(str(opt), key=f"{prefix}__{opt}")
+
+# Initialise all checkbox groups
+for prefix, opts in FILTER_GROUPS.items():
+    _init_checkbox_group(prefix, opts)
+
+# Read current selections from session state
+selected_years = _read_checkbox_group('fy', available_years)
+selected_services = _read_checkbox_group('fs', available_services)
+selected_lobs = _read_checkbox_group('fl', available_lobs)
+selected_months = _read_checkbox_group('fm', available_months)
+selected_channels = _read_checkbox_group('fc', available_channels)
+selected_regions = _read_checkbox_group('fr', available_regions)
+selected_makes = _read_checkbox_group('fmk', available_makes)
+selected_models = _read_checkbox_group('fmd', available_models)
 
 if not selected_years:
     st.warning("Please select at least one year.")
     st.stop()
-if 'All' in selected_services:
-    selected_services = ['All']
-if 'All' in selected_lobs:
-    selected_lobs = ['All']
-if 'All' in selected_channels:
-    selected_channels = ['All']
-if 'All' in selected_regions:
-    selected_regions = ['All']
-if 'All' in selected_makes:
-    selected_makes = ['All']
-if 'All' in selected_models:
-    selected_models = ['All']
-if 'All' in selected_month_display:
-    selected_months = available_months
-else:
-    selected_months = [int(m.split(' - ')[0]) for m in selected_month_display]
 
 # ============================================================================
 # APPLY FILTERS (single boolean mask)
 # ============================================================================
 mask = df['Year'].isin(selected_years)
-if 'All' not in selected_services:
+if len(selected_services) < len(available_services):
     mask &= df['ประเภทการบริการ'].isin(selected_services)
-if 'All' not in selected_lobs:
+if len(selected_lobs) < len(available_lobs):
     mask &= df['LOB'].isin(selected_lobs)
-if 'All' not in selected_channels and 'รหัสโครงการ' in df.columns:
-    mask &= df['รหัสโครงการ'].astype(str).isin(selected_channels)
-if 'All' not in selected_regions and 'จังหวัด' in df.columns:
-    mask &= df['จังหวัด'].astype(str).isin(selected_regions)
-if 'All' not in selected_month_display:
+if len(selected_months) < len(available_months):
     mask &= df['Month'].isin(selected_months)
-if 'All' not in selected_makes and 'ยี่ห้อรถ' in df.columns:
+if len(selected_channels) < len(available_channels) and 'รหัสโครงการ' in df.columns:
+    mask &= df['รหัสโครงการ'].astype(str).isin(selected_channels)
+if len(selected_regions) < len(available_regions) and 'จังหวัด' in df.columns:
+    mask &= df['จังหวัด'].astype(str).isin(selected_regions)
+if len(selected_makes) < len(available_makes) and 'ยี่ห้อรถ' in df.columns:
     mask &= df['ยี่ห้อรถ'].astype(str).isin(selected_makes)
-if 'All' not in selected_models and 'รุ่นรถ' in df.columns:
+if len(selected_models) < len(available_models) and 'รุ่นรถ' in df.columns:
     mask &= df['รุ่นรถ'].astype(str).isin(selected_models)
 
 filtered_df = df[mask]
@@ -746,33 +769,9 @@ st.markdown('<div class="section-header">📋 Service Utilization – Interactiv
 pivot_cols_available = [c for c in ['LOB', 'ประเภทการบริการ', 'Year', 'Month', 'จังหวัด', 'ยี่ห้อรถ', 'รุ่นรถ', 'Policy Type', 'รหัสโครงการ', 'แผนก'] if c in filtered_df.columns]
 value_cols_available = [c for c in ['Fee (Baht)', 'ลูกค้าจ่ายส่วนต่าง'] if c in filtered_df.columns]
 
-# Styled control boxes CSS - clear seamless boxes around each dropdown
+# Row reorder section CSS
 st.markdown("""
 <style>
-    /* Pivot control box styling */
-    .pivot-box {
-        background: white;
-        border: 1px solid #E2E8F0;
-        border-radius: 10px;
-        padding: 14px 16px;
-        box-shadow: 0 1px 4px rgba(0,0,0,0.05);
-        margin-bottom: 8px;
-        transition: all 0.2s ease;
-    }
-    .pivot-box:hover {
-        border-color: #CBD5E0;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    }
-    .pivot-box-label {
-        font-size: 12px;
-        font-weight: 600;
-        color: #475569;
-        margin-bottom: 10px;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-    }
-    /* Row reorder section */
     .row-reorder-box {
         background: linear-gradient(135deg, #F8FAFC 0%, #EDF2F7 100%);
         border: 1px dashed #CBD5E0;
@@ -791,35 +790,44 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Pivot controls with seamless boxes
+# Pivot controls with seamless bordered containers
 pc1, pc2, pc3, pc4 = st.columns(4)
 with pc1:
-    st.markdown('<div class="pivot-box"><div class="pivot-box-label">📊 Rows</div>', unsafe_allow_html=True)
-    pivot_rows_selected = st.multiselect("Select row fields", options=pivot_cols_available, default=['LOB'], key="pivot_rows", label_visibility="collapsed")
-    st.markdown('</div>', unsafe_allow_html=True)
+    with st.container(border=True):
+        st.markdown("**📊 Rows**")
+        pivot_rows_selected = st.multiselect("Select row fields", options=pivot_cols_available, default=['LOB'], key="pivot_rows", label_visibility="collapsed")
 with pc2:
-    st.markdown('<div class="pivot-box"><div class="pivot-box-label">📈 Columns</div>', unsafe_allow_html=True)
-    pivot_columns = st.multiselect("Select column fields", options=pivot_cols_available, default=['Year'], key="pivot_columns", label_visibility="collapsed")
-    st.markdown('</div>', unsafe_allow_html=True)
+    with st.container(border=True):
+        st.markdown("**📈 Columns**")
+        pivot_columns = st.multiselect("Select column fields", options=pivot_cols_available, default=['Year'], key="pivot_columns", label_visibility="collapsed")
 with pc3:
-    st.markdown('<div class="pivot-box"><div class="pivot-box-label">🔢 Values</div>', unsafe_allow_html=True)
-    pivot_value = st.selectbox("Select value", options=['Case Count'] + value_cols_available, index=0, key="pivot_value", label_visibility="collapsed")
-    st.markdown('</div>', unsafe_allow_html=True)
+    with st.container(border=True):
+        st.markdown("**🔢 Values**")
+        pivot_value = st.selectbox("Select value", options=['Case Count'] + value_cols_available, index=0, key="pivot_value", label_visibility="collapsed")
 with pc4:
-    st.markdown('<div class="pivot-box"><div class="pivot-box-label">⚙️ Aggregation</div>', unsafe_allow_html=True)
-    pivot_agg = st.selectbox("Select aggregation", options=['Count', 'Sum', 'Mean', 'Median', 'Min', 'Max'], index=0, key="pivot_agg", label_visibility="collapsed")
-    st.markdown('</div>', unsafe_allow_html=True)
+    with st.container(border=True):
+        st.markdown("**⚙️ Aggregation**")
+        pivot_agg = st.selectbox("Select aggregation", options=['Count', 'Sum', 'Mean', 'Median', 'Min', 'Max'], index=0, key="pivot_agg", label_visibility="collapsed")
 
 # Row field reordering with drag and drop
 pivot_rows = list(pivot_rows_selected) if pivot_rows_selected else []
 if len(pivot_rows_selected) > 1:
     if SORTABLES_AVAILABLE:
-        st.markdown('<div class="row-reorder-box">', unsafe_allow_html=True)
-        st.markdown('<div class="row-reorder-label">↔️ Drag to reorder row fields</div>', unsafe_allow_html=True)
-        pivot_rows = sort_items(list(pivot_rows_selected), direction="horizontal", key="pivot_row_sort")
-        st.markdown('</div>', unsafe_allow_html=True)
+        # Ensure the sortable list matches current selection
+        # (preserve previous order for items still selected, append new ones at end)
+        prev_order = st.session_state.get('_pivot_row_order', [])
+        ordered = [x for x in prev_order if x in pivot_rows_selected]
+        for x in pivot_rows_selected:
+            if x not in ordered:
+                ordered.append(x)
+        st.session_state['_pivot_row_order'] = ordered
+
+        with st.container(border=True):
+            st.markdown("**↔️ Drag to reorder row fields**")
+            sort_key = "pivot_row_sort_" + "_".join(sorted(ordered))
+            pivot_rows = sort_items(ordered, direction="horizontal", key=sort_key)
+            st.session_state['_pivot_row_order'] = pivot_rows
     else:
-        # Fallback: show message to install streamlit-sortables
         st.info("Install `streamlit-sortables` for drag-drop reordering: `pip install streamlit-sortables`")
         st.markdown("**Current row order:** " + " → ".join(pivot_rows_selected))
 
@@ -1019,64 +1027,31 @@ else:
     st.info("Select at least one Row or Column dimension to build the pivot table.")
 
 # ============================================================================
-# FILTERS – UI Section (above Cost Analysis)
+# FILTERS – UI Section (above Cost Analysis) – Checkbox-based
 # ============================================================================
 st.markdown('<div class="section-header">🔍 Data Filters</div>', unsafe_allow_html=True)
 
-# Filter box styling
-st.markdown("""
-<style>
-    .filter-box {
-        background: white;
-        border: 1px solid #E2E8F0;
-        border-radius: 10px;
-        padding: 14px 16px;
-        box-shadow: 0 1px 4px rgba(0,0,0,0.05);
-        margin-bottom: 8px;
-    }
-    .filter-box:hover {
-        border-color: #CBD5E0;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    }
-    .filter-box-label {
-        font-size: 12px;
-        font-weight: 600;
-        color: #475569;
-        margin-bottom: 8px;
-    }
-</style>
-""", unsafe_allow_html=True)
-
-with st.expander("📊 Filters", expanded=False):
-    fc1, fc2, fc3, fc4 = st.columns(4)
-    with fc1:
-        st.markdown('<div class="filter-box"><div class="filter-box-label">📅 Year</div>', unsafe_allow_html=True)
-        st.multiselect("Year", options=available_years, key="filter_year", label_visibility="collapsed")
-        st.markdown('</div>', unsafe_allow_html=True)
-        st.markdown('<div class="filter-box"><div class="filter-box-label">🔧 Service Type</div>', unsafe_allow_html=True)
-        st.multiselect("Service Type", options=['All'] + available_services, key="filter_service", label_visibility="collapsed")
-        st.markdown('</div>', unsafe_allow_html=True)
-    with fc2:
-        st.markdown('<div class="filter-box"><div class="filter-box-label">📋 LOB</div>', unsafe_allow_html=True)
-        st.multiselect("LOB", options=['All'] + available_lobs, key="filter_lob", label_visibility="collapsed")
-        st.markdown('</div>', unsafe_allow_html=True)
-        st.markdown('<div class="filter-box"><div class="filter-box-label">📆 Month</div>', unsafe_allow_html=True)
-        st.multiselect("Month", options=['All'] + month_options, key="filter_month", label_visibility="collapsed")
-        st.markdown('</div>', unsafe_allow_html=True)
-    with fc3:
-        st.markdown('<div class="filter-box"><div class="filter-box-label">📡 Channel</div>', unsafe_allow_html=True)
-        st.multiselect("Channel", options=['All'] + available_channels, key="filter_channel", label_visibility="collapsed")
-        st.markdown('</div>', unsafe_allow_html=True)
-        st.markdown('<div class="filter-box"><div class="filter-box-label">📍 Region</div>', unsafe_allow_html=True)
-        st.multiselect("Region", options=['All'] + available_regions, key="filter_region", label_visibility="collapsed")
-        st.markdown('</div>', unsafe_allow_html=True)
-    with fc4:
-        st.markdown('<div class="filter-box"><div class="filter-box-label">🚗 Vehicle Make</div>', unsafe_allow_html=True)
-        st.multiselect("Vehicle Make", options=['All'] + available_makes, key="filter_make", label_visibility="collapsed")
-        st.markdown('</div>', unsafe_allow_html=True)
-        st.markdown('<div class="filter-box"><div class="filter-box-label">🚙 Vehicle Model</div>', unsafe_allow_html=True)
-        st.multiselect("Vehicle Model", options=['All'] + available_models, key="filter_model", label_visibility="collapsed")
-        st.markdown('</div>', unsafe_allow_html=True)
+fc1, fc2, fc3, fc4 = st.columns(4)
+with fc1:
+    with st.expander("📅 Year", expanded=False):
+        render_checkbox_group("Year", available_years, 'fy')
+    with st.expander("🔧 Service Type", expanded=False):
+        render_checkbox_group("Service Type", available_services, 'fs')
+with fc2:
+    with st.expander("📋 LOB", expanded=False):
+        render_checkbox_group("LOB", available_lobs, 'fl')
+    with st.expander("📆 Month", expanded=False):
+        render_checkbox_group("Month", available_months, 'fm')
+with fc3:
+    with st.expander("📡 Channel", expanded=False):
+        render_checkbox_group("Channel", available_channels, 'fc')
+    with st.expander("📍 Region", expanded=False):
+        render_checkbox_group("Region", available_regions, 'fr')
+with fc4:
+    with st.expander("🚗 Vehicle Make", expanded=False):
+        render_checkbox_group("Vehicle Make", available_makes, 'fmk')
+    with st.expander("🚙 Vehicle Model", expanded=False):
+        render_checkbox_group("Vehicle Model", available_models, 'fmd')
 
 # ============================================================================
 # COST ANALYSIS
