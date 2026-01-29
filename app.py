@@ -8,7 +8,6 @@ import html
 import re
 from io import BytesIO
 
-# Try to import streamlit-sortables for drag-drop reordering
 try:
     from streamlit_sortables import sort_items
     SORTABLES_AVAILABLE = True
@@ -24,15 +23,13 @@ HEALTH_THRESHOLD_WARNING = 15
 CACHE_TTL = 3600
 DEFAULT_DATA_FILE = "(Test) RSA Report.xlsx"
 UPLOAD_DIR = "uploaded_data"
-PASSWORD = "sompo2024"  # Change this or use st.secrets["password"] in production
+PASSWORD = "sompo2024"
 
-# Suppress pandas future warning (outside cached functions)
 pd.set_option('future.no_silent_downcasting', True)
 
-# Page configuration - must be first Streamlit command
 st.set_page_config(
     page_title="RSA Dashboard - Sompo Thailand",
-    page_icon="🚗",
+    page_icon="\U0001f697",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
@@ -41,35 +38,13 @@ st.set_page_config(
 # PASSWORD PROTECTION
 # ============================================================================
 def check_password():
-    """Simple password gate for the dashboard."""
     if "authenticated" not in st.session_state:
         st.session_state.authenticated = False
-
     if st.session_state.authenticated:
         return True
 
     st.markdown("""
     <style>
-        .login-container {
-            max-width: 420px;
-            margin: 10vh auto;
-            padding: 48px 40px;
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 8px 32px rgba(27, 40, 56, 0.12);
-            text-align: center;
-        }
-        .login-title {
-            font-size: 28px;
-            font-weight: 700;
-            color: #1B2838;
-            margin-bottom: 8px;
-        }
-        .login-subtitle {
-            font-size: 14px;
-            color: #718096;
-            margin-bottom: 32px;
-        }
         .stApp { background-color: #F0F2F6; }
         #MainMenu {visibility: hidden;}
         footer {visibility: hidden;}
@@ -81,29 +56,23 @@ def check_password():
     with col2:
         st.markdown("""
         <div style="text-align:center; margin-top: 10vh;">
-            <div style="font-size: 48px; margin-bottom: 16px;">🚗</div>
+            <div style="font-size: 48px; margin-bottom: 16px;">\U0001f697</div>
             <div style="font-size: 28px; font-weight: 700; color: #1B2838; margin-bottom: 8px;">RSA Dashboard</div>
             <div style="font-size: 14px; color: #718096; margin-bottom: 32px;">Sompo Thailand - Roadside Assistance</div>
         </div>
         """, unsafe_allow_html=True)
-
         password_input = st.text_input("Enter Password", type="password", key="password_input")
-        login_btn = st.button("Login", use_container_width=True, type="primary")
-
-        if login_btn:
-            # Try st.secrets first, fall back to hardcoded
+        if st.button("Login", use_container_width=True, type="primary"):
             try:
                 correct_pw = st.secrets["password"]
             except Exception:
                 correct_pw = PASSWORD
-
             if password_input == correct_pw:
                 st.session_state.authenticated = True
                 st.rerun()
             else:
                 st.error("Incorrect password. Please try again.")
     return False
-
 
 if not check_password():
     st.stop()
@@ -120,31 +89,23 @@ st.markdown("""
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
-
-    /* Sidebar */
     [data-testid="stSidebar"] {
         background: linear-gradient(180deg, #1B2838 0%, #2A3F54 100%);
         padding-top: 2rem;
     }
     [data-testid="stSidebar"] .stMarkdown { color: #FFFFFF; }
     [data-testid="stSidebar"] label {
-        color: #E0E6ED !important;
-        font-weight: 500 !important;
-        font-size: 13px !important;
-        letter-spacing: 0.03em;
-        margin-top: 0.8rem;
+        color: #E0E6ED !important; font-weight: 500 !important;
+        font-size: 13px !important; letter-spacing: 0.03em; margin-top: 0.8rem;
     }
     [data-testid="stSidebar"] .stMultiSelect [data-baseweb="select"] {
         background-color: rgba(255, 255, 255, 0.1);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        border-radius: 6px;
+        border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 6px;
     }
     [data-testid="stSidebar"] h2 {
         color: #FFFFFF !important; font-size: 18px !important;
         font-weight: 600 !important; margin-bottom: 1.5rem;
     }
-
-    /* KPI Cards */
     .metric-card {
         background: linear-gradient(135deg, #1B2838 0%, #2D4A5C 100%);
         padding: 24px 20px; border-radius: 12px; color: white;
@@ -172,8 +133,6 @@ st.markdown("""
     .positive { color: #27AE60; }
     .negative { color: #E74C3C; }
     .warning  { color: #F39C12; }
-
-    /* Health Indicator */
     .health-indicator {
         padding: 24px 28px; border-radius: 12px; margin: 20px 0;
         font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,0.08);
@@ -197,8 +156,6 @@ st.markdown("""
     .health-stat-item { display: flex; flex-direction: column; }
     .health-stat-label { font-size: 11px; letter-spacing: 0.05em; opacity: 0.8; margin-bottom: 4px; font-weight: 600; }
     .health-stat-value { font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
-
-    /* Section Headers */
     .section-header {
         color: #1B2838; font-size: 24px; font-weight: 700;
         margin-top: 48px; margin-bottom: 24px; padding-bottom: 12px;
@@ -209,8 +166,6 @@ st.markdown("""
         margin-left: 16px; padding: 4px 12px; background-color: #EDF2F7;
         border-radius: 6px; font-weight: 500;
     }
-
-    /* Service Table */
     .service-table-container { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow-x: auto; }
     .service-table { font-size: 13px; width: 100%; border-collapse: separate; border-spacing: 0; }
     .service-table th {
@@ -222,58 +177,29 @@ st.markdown("""
     .service-table th:last-child { border-top-right-radius: 8px; }
     .service-table td { padding: 12px 16px; border-bottom: 1px solid #E2E8F0; background-color: #FFFFFF; }
     .service-table tr:hover td { background-color: #F8FAFC; }
-    .subtotal-row td { background-color: #EBF5FB !important; font-weight: 600; color: #1B2838; border-top: 2px solid #4A90D9; border-bottom: 2px solid #4A90D9; }
-    .total-row td { background: linear-gradient(135deg, #1B2838 0%, #2A3F54 100%) !important; color: white !important; font-weight: 700; font-size: 14px; padding: 16px; border: none; position: sticky; bottom: 0; z-index: 2; }
-    .bar-cell { display: flex; align-items: center; gap: 8px; min-width: 100px; }
-    .bar-cell-number { min-width: 40px; font-weight: 600; color: #1B2838; font-variant-numeric: tabular-nums; text-align: right; }
-    .bar-cell-number.zero-value { color: #A0AEC0; font-weight: 400; }
-    .bar-container { flex: 1; background-color: #E8EEF7; border-radius: 4px; height: 22px; position: relative; overflow: hidden; }
-    .inline-bar { height: 100%; background: linear-gradient(90deg, #4A90D9 0%, #6FB1FF 100%); border-radius: 4px; transition: width 0.3s ease; }
-
-    /* Empty State */
     .empty-state { background: white; border-radius: 12px; padding: 48px 24px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin: 24px 0; }
     .empty-state-icon { font-size: 64px; margin-bottom: 16px; opacity: 0.5; }
     .empty-state-title { font-size: 20px; font-weight: 600; color: #1B2838; margin-bottom: 8px; }
     .empty-state-message { font-size: 14px; color: #718096; }
-
-    /* Titles */
     h1 { color: #1B2838 !important; font-weight: 700 !important; font-size: 32px !important; margin-bottom: 8px !important; }
     h3 { color: #4A5568 !important; font-weight: 500 !important; font-size: 16px !important; margin-bottom: 32px !important; }
-
-    /* Charts */
     .js-plotly-plot { border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); background: white; padding: 12px; }
-
-    /* Buttons */
     .stDownloadButton button {
         background: linear-gradient(135deg, #4A90D9 0%, #2D5AA0 100%);
         color: white; border: none; border-radius: 8px; padding: 12px 24px; font-weight: 600;
     }
     .stDownloadButton button:hover { background: linear-gradient(135deg, #2D5AA0 0%, #1B2838 100%); box-shadow: 0 4px 12px rgba(74,144,217,0.3); }
-
-    /* Footer */
     .dashboard-footer { text-align: center; color: #718096; padding: 32px 20px; margin-top: 48px; border-top: 2px solid #E2E8F0; font-size: 13px; background: white; border-radius: 12px; }
-
-    /* Seamless Filter Expander */
     .stExpander { border: none !important; box-shadow: none !important; background: transparent !important; }
     .stExpander > details { border: 1px solid #E2E8F0 !important; border-radius: 8px !important; background: white !important; box-shadow: 0 2px 8px rgba(0,0,0,0.06) !important; }
     .stExpander > details > summary { padding: 12px 16px !important; font-weight: 600 !important; color: #1B2838 !important; font-size: 14px !important; }
     .stExpander > details[open] > summary { border-bottom: 1px solid #E2E8F0 !important; }
     .stExpander > details > div { padding: 16px !important; }
-
-    /* Compact checkboxes inside filter containers */
-    .stExpander .stCheckbox { margin-bottom: -10px; }
-    .stExpander .stCheckbox label { font-size: 13px !important; }
-    /* Bordered containers inside filters – scrollable when tall */
-    .stExpander [data-testid="stVerticalBlockBorderWrapper"] { max-height: 280px; overflow-y: auto; }
-
-    /* Responsive */
     @media (max-width: 768px) {
         .metric-card { margin-bottom: 12px; }
         .metric-value { font-size: 22px; }
         .section-header { font-size: 18px; margin-top: 32px; }
         .health-indicator .health-stats { grid-template-columns: 1fr 1fr; }
-        .bar-container { display: none; }
-        .bar-cell { min-width: auto; }
     }
     @media (max-width: 1200px) {
         div[style*="grid-template-columns:repeat(5"] { grid-template-columns: repeat(3, 1fr) !important; }
@@ -291,99 +217,86 @@ st.markdown("""
 # DATA LOADING
 # ============================================================================
 @st.cache_data(ttl=CACHE_TTL)
-def process_dataframe(df_raw):
-    """Process raw dataframe with all cleaning logic."""
-    df = df_raw.copy()
+def load_and_process(file_bytes=None, file_path=None):
+    """Load from bytes or path and process in one cached step."""
+    if file_bytes is not None:
+        df_raw = pd.read_excel(BytesIO(file_bytes), header=None)
+    elif file_path and os.path.exists(file_path):
+        df_raw = pd.read_excel(file_path, header=None)
+    else:
+        return None
 
-    # Find header row dynamically
-    header_found = False
-    for idx in range(min(len(df), 30)):  # Only check first 30 rows
+    df = df_raw.copy()
+    # Find header row
+    for idx in range(min(len(df), 30)):
         if 'Policy No.' in df.iloc[idx].values:
             df.columns = df.iloc[idx]
             df = df.iloc[idx + 1:].reset_index(drop=True)
-            header_found = True
             break
+    else:
+        raise ValueError("Could not find header row containing 'Policy No.'")
 
-    if not header_found:
-        raise ValueError("Could not find header row containing 'Policy No.' in the Excel file.")
-
-    # Clean Fee column name (has newline)
+    # Clean Fee column name
     fee_cols = [c for c in df.columns if isinstance(c, str) and 'Fee' in c and 'Exceed' not in c]
     if fee_cols:
         df = df.rename(columns={fee_cols[0]: 'Fee (Baht)'})
 
-    # Process date column - handle both string and datetime types
-    if 'วันที่' in df.columns:
-        if df['วันที่'].dtype == 'object':
-            df['วันที่'] = pd.to_datetime(df['วันที่'], format='%d/%m/%Y', errors='coerce')
+    # Process dates
+    if '\u0e27\u0e31\u0e19\u0e17\u0e35\u0e48' in df.columns:
+        if df['\u0e27\u0e31\u0e19\u0e17\u0e35\u0e48'].dtype == 'object':
+            df['\u0e27\u0e31\u0e19\u0e17\u0e35\u0e48'] = pd.to_datetime(df['\u0e27\u0e31\u0e19\u0e17\u0e35\u0e48'], format='%d/%m/%Y', errors='coerce')
         else:
-            df['วันที่'] = pd.to_datetime(df['วันที่'], errors='coerce')
+            df['\u0e27\u0e31\u0e19\u0e17\u0e35\u0e48'] = pd.to_datetime(df['\u0e27\u0e31\u0e19\u0e17\u0e35\u0e48'], errors='coerce')
+        df = df.dropna(subset=['\u0e27\u0e31\u0e19\u0e17\u0e35\u0e48'])
+        df['Day'] = df['\u0e27\u0e31\u0e19\u0e17\u0e35\u0e48'].dt.day.astype(int)
+        df['Month'] = df['\u0e27\u0e31\u0e19\u0e17\u0e35\u0e48'].dt.month.astype(int)
+        df['Year'] = df['\u0e27\u0e31\u0e19\u0e17\u0e35\u0e48'].dt.year.astype(int)
+        df['\u0e27\u0e31\u0e19\u0e17\u0e35\u0e48'] = df['\u0e27\u0e31\u0e19\u0e17\u0e35\u0e48'].dt.date
 
-        # Drop rows where date parsing failed entirely
-        df = df.dropna(subset=['วันที่'])
-
-        # Add date components using standard int (safe after dropna)
-        df['Day'] = df['วันที่'].dt.day.astype(int)
-        df['Month'] = df['วันที่'].dt.month.astype(int)
-        df['Year'] = df['วันที่'].dt.year.astype(int)
-        df['วันที่'] = df['วันที่'].dt.date
-
-    # Drop fully empty rows
     df = df.dropna(how='all').reset_index(drop=True)
-
-    # Replace '-' with pd.NA
     df = df.replace('-', pd.NA)
 
-    # Extract Policy Type (LOB)
+    # LOB
     if 'Policy No.' in df.columns:
         df['Policy Type'] = df['Policy No.'].str.extract(r'(A[CV]\d)', expand=False)
     df['LOB'] = df['Policy Type'].fillna('Unre') if 'Policy Type' in df.columns else 'Unre'
 
-    # Extract province from license plate
-    if 'ทะเบียนรถ' in df.columns:
-        # Clean special characters from existing province column
-        if 'จังหวัด ทะเบียนรถ' in df.columns:
-            df['จังหวัด ทะเบียนรถ'] = df['จังหวัด ทะเบียนรถ'].astype(str).str.replace(r'[.!@#$%^&*\d]', '', regex=True).str.strip()
-            df['จังหวัด ทะเบียนรถ'] = df['จังหวัด ทะเบียนรถ'].replace(['', 'nan', 'None', '<NA>'], pd.NA)
-        # Extract trailing Thai text after the last digit in the plate
-        plate_province = df['ทะเบียนรถ'].astype(str).str.extract(r'(\d)[.\s]*([ก-๙]+)\s*[.!@#$%^&*]*\s*$', expand=True)
+    # Province extraction
+    if '\u0e17\u0e30\u0e40\u0e1a\u0e35\u0e22\u0e19\u0e23\u0e16' in df.columns:
+        if '\u0e08\u0e31\u0e07\u0e2b\u0e27\u0e31\u0e14 \u0e17\u0e30\u0e40\u0e1a\u0e35\u0e22\u0e19\u0e23\u0e16' in df.columns:
+            df['\u0e08\u0e31\u0e07\u0e2b\u0e27\u0e31\u0e14 \u0e17\u0e30\u0e40\u0e1a\u0e35\u0e22\u0e19\u0e23\u0e16'] = df['\u0e08\u0e31\u0e07\u0e2b\u0e27\u0e31\u0e14 \u0e17\u0e30\u0e40\u0e1a\u0e35\u0e22\u0e19\u0e23\u0e16'].astype(str).str.replace(r'[.!@#$%^&*\d]', '', regex=True).str.strip()
+            df['\u0e08\u0e31\u0e07\u0e2b\u0e27\u0e31\u0e14 \u0e17\u0e30\u0e40\u0e1a\u0e35\u0e22\u0e19\u0e23\u0e16'] = df['\u0e08\u0e31\u0e07\u0e2b\u0e27\u0e31\u0e14 \u0e17\u0e30\u0e40\u0e1a\u0e35\u0e22\u0e19\u0e23\u0e16'].replace(['', 'nan', 'None', '<NA>'], pd.NA)
+        plate_province = df['\u0e17\u0e30\u0e40\u0e1a\u0e35\u0e22\u0e19\u0e23\u0e16'].astype(str).str.extract(r'(\d)[.\s]*([ก-๙]+)\s*[.!@#$%^&*]*\s*$', expand=True)
         extracted = plate_province[1]
-        # Only fill where the existing column is missing
-        if 'จังหวัด ทะเบียนรถ' in df.columns:
-            df['จังหวัด ทะเบียนรถ'] = df['จังหวัด ทะเบียนรถ'].fillna(extracted)
+        if '\u0e08\u0e31\u0e07\u0e2b\u0e27\u0e31\u0e14 \u0e17\u0e30\u0e40\u0e1a\u0e35\u0e22\u0e19\u0e23\u0e16' in df.columns:
+            df['\u0e08\u0e31\u0e07\u0e2b\u0e27\u0e31\u0e14 \u0e17\u0e30\u0e40\u0e1a\u0e35\u0e22\u0e19\u0e23\u0e16'] = df['\u0e08\u0e31\u0e07\u0e2b\u0e27\u0e31\u0e14 \u0e17\u0e30\u0e40\u0e1a\u0e35\u0e22\u0e19\u0e23\u0e16'].fillna(extracted)
         else:
-            df['จังหวัด ทะเบียนรถ'] = extracted
-        df['จังหวัด ทะเบียนรถ'] = df['จังหวัด ทะเบียนรถ'].replace(['กรุงเทพ', 'กทม'], 'กรุงเทพมหานคร')
+            df['\u0e08\u0e31\u0e07\u0e2b\u0e27\u0e31\u0e14 \u0e17\u0e30\u0e40\u0e1a\u0e35\u0e22\u0e19\u0e23\u0e16'] = extracted
+        df['\u0e08\u0e31\u0e07\u0e2b\u0e27\u0e31\u0e14 \u0e17\u0e30\u0e40\u0e1a\u0e35\u0e22\u0e19\u0e23\u0e16'] = df['\u0e08\u0e31\u0e07\u0e2b\u0e27\u0e31\u0e14 \u0e17\u0e30\u0e40\u0e1a\u0e35\u0e22\u0e19\u0e23\u0e16'].replace(['\u0e01\u0e23\u0e38\u0e07\u0e40\u0e17\u0e1e', '\u0e01\u0e17\u0e21'], '\u0e01\u0e23\u0e38\u0e07\u0e40\u0e17\u0e1e\u0e21\u0e2b\u0e32\u0e19\u0e04\u0e23')
 
-    # Convert Fee to numeric
     if 'Fee (Baht)' in df.columns:
         df['Fee (Baht)'] = pd.to_numeric(df['Fee (Baht)'], errors='coerce')
 
-    # Normalize vehicle make to uppercase
-    if 'ยี่ห้อรถ' in df.columns:
-        df['ยี่ห้อรถ'] = df['ยี่ห้อรถ'].astype(str).str.upper().replace('<NA>', pd.NA).replace('NAN', pd.NA)
+    if '\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d\u0e23\u0e16' in df.columns:
+        df['\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d\u0e23\u0e16'] = df['\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d\u0e23\u0e16'].astype(str).str.upper().replace('<NA>', pd.NA).replace('NAN', pd.NA)
+
+    # Convert key filter columns to category for faster isin()
+    for col in ['\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e01\u0e32\u0e23\u0e1a\u0e23\u0e34\u0e01\u0e32\u0e23', 'LOB']:
+        if col in df.columns:
+            df[col] = df[col].astype('category')
 
     return df
 
 
-def load_default_data():
-    """Load data from default Excel file."""
-    if os.path.exists(DEFAULT_DATA_FILE):
-        return pd.read_excel(DEFAULT_DATA_FILE, header=None)
-    return None
-
-
 def load_persisted_upload():
-    """Load previously uploaded file if it exists."""
     os.makedirs(UPLOAD_DIR, exist_ok=True)
     persisted_path = os.path.join(UPLOAD_DIR, "persisted_upload.xlsx")
     if os.path.exists(persisted_path):
-        return pd.read_excel(persisted_path, header=None), persisted_path
-    return None, None
+        return persisted_path
+    return None
 
 
 def persist_uploaded_file(uploaded_file):
-    """Save uploaded file to disk for persistence across reruns."""
     os.makedirs(UPLOAD_DIR, exist_ok=True)
     persisted_path = os.path.join(UPLOAD_DIR, "persisted_upload.xlsx")
     with open(persisted_path, "wb") as f:
@@ -392,58 +305,46 @@ def persist_uploaded_file(uploaded_file):
 
 
 # ============================================================================
-# DATA SOURCE SELECTION (silent – UI for upload moved to bottom)
+# DATA SOURCE SELECTION
 # ============================================================================
-# Check session state for uploaded file first
 if 'uploaded_file_bytes' not in st.session_state:
     st.session_state.uploaded_file_bytes = None
     st.session_state.uploaded_file_name = None
 
-df_raw = None
+df = None
 data_source_label = ""
 
 if st.session_state.uploaded_file_bytes is not None:
-    df_raw = pd.read_excel(BytesIO(st.session_state.uploaded_file_bytes), header=None)
+    df = load_and_process(file_bytes=st.session_state.uploaded_file_bytes)
     data_source_label = f"Uploaded: {st.session_state.uploaded_file_name}"
 else:
-    persisted_df, persisted_path = load_persisted_upload()
-    if persisted_df is not None:
-        df_raw = persisted_df
+    persisted_path = load_persisted_upload()
+    if persisted_path:
+        df = load_and_process(file_path=persisted_path)
         data_source_label = "Previously uploaded file"
     else:
-        df_raw = load_default_data()
-        if df_raw is not None:
+        df = load_and_process(file_path=DEFAULT_DATA_FILE)
+        if df is not None:
             data_source_label = DEFAULT_DATA_FILE
 
-if df_raw is None:
-    st.markdown("# 🚗 RSA Dashboard - Sompo Thailand")
+if df is None:
+    st.markdown("# \U0001f697 RSA Dashboard - Sompo Thailand")
     st.markdown("""
     <div class="empty-state">
-        <div class="empty-state-icon">📂</div>
+        <div class="empty-state-icon">\U0001f4c2</div>
         <div class="empty-state-title">No Data Available</div>
-        <div class="empty-state-message">
-            Please upload an RSA Report Excel file using the sidebar, or place the default file in the application directory.
-        </div>
+        <div class="empty-state-message">Please upload an RSA Report Excel file or place the default file in the application directory.</div>
     </div>
     """, unsafe_allow_html=True)
     st.stop()
 
-# Process the data
-with st.spinner("Processing data..."):
-    try:
-        df = process_dataframe(df_raw)
-    except Exception as e:
-        st.error(f"Error processing data: {str(e)}")
-        st.stop()
-
 # Validate required columns
-required_cols = ['Year', 'Month', 'Fee (Baht)', 'ประเภทการบริการ', 'LOB']
+required_cols = ['Year', 'Month', 'Fee (Baht)', '\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e01\u0e32\u0e23\u0e1a\u0e23\u0e34\u0e01\u0e32\u0e23', 'LOB']
 missing = [c for c in required_cols if c not in df.columns]
 if missing:
     st.error(f"Missing required columns after processing: {missing}")
     st.stop()
 
-# Session state for stable export timestamp
 if 'export_timestamp' not in st.session_state:
     st.session_state.export_timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 
@@ -452,84 +353,9 @@ if 'export_timestamp' not in st.session_state:
 # HELPER FUNCTIONS
 # ============================================================================
 def safe_sorted_unique(series):
-    """Get sorted unique string values from a series, handling mixed types."""
     return sorted([str(v) for v in series.dropna().unique()])
 
-
-def generate_service_table_html(data, years_list):
-    """Generate HTML table for service utilization with inline bars."""
-    lob_order = ['AV1', 'AV5', 'AV3', 'AV9', 'AC3', 'Unre']
-    service_types = safe_sorted_unique(data['ประเภทการบริการ'])
-
-    if not service_types or not years_list:
-        return '<div class="empty-state"><div class="empty-state-title">No service data available</div></div>'
-
-    # Calculate max for bar scaling
-    max_count = 0
-    for lob in lob_order:
-        lob_df = data[data['LOB'] == lob]
-        for svc in service_types:
-            svc_df = lob_df[lob_df['ประเภทการบริการ'] == svc]
-            for yr in years_list:
-                cnt = len(svc_df[svc_df['Year'] == yr])
-                max_count = max(max_count, cnt)
-
-    num_year_cols = len(years_list)
-    total_cols = num_year_cols + 3  # LOB + Service Type + years + Total
-
-    tbl = '<div class="service-table-container"><table class="service-table">'
-    tbl += '<thead><tr><th>LOB</th><th>Service Type</th>'
-    for yr in years_list:
-        tbl += f'<th>{yr}</th>'
-    tbl += '<th>Total</th></tr></thead><tbody>'
-
-    gt_per_year = {yr: 0 for yr in years_list}
-    gt = 0
-
-    for lob in lob_order:
-        lob_df = data[data['LOB'] == lob]
-        lt_per_year = {yr: 0 for yr in years_list}
-        lt = 0
-
-        for idx, svc in enumerate(service_types):
-            svc_df = lob_df[lob_df['ประเภทการบริการ'] == svc]
-            row_total = 0
-            tbl += '<tr>'
-            if idx == 0:
-                tbl += f'<td rowspan="{len(service_types)}" style="background-color:#F7FAFC;font-weight:600;vertical-align:middle;color:#1B2838;border-right:2px solid #E2E8F0;">{html.escape(str(lob))}</td>'
-            tbl += f'<td style="color:#4A5568;">{html.escape(str(svc))}</td>'
-
-            for yr in years_list:
-                cnt = len(svc_df[svc_df['Year'] == yr])
-                row_total += cnt
-                lt_per_year[yr] += cnt
-                gt_per_year[yr] += cnt
-                bw = (cnt / max_count * 100) if max_count > 0 else 0
-                ncls = "bar-cell-number zero-value" if cnt == 0 else "bar-cell-number"
-                dv = "—" if cnt == 0 else str(cnt)
-                tbl += f'<td><div class="bar-cell"><span class="{ncls}">{dv}</span><div class="bar-container"><div class="inline-bar" style="width:{bw}%;"></div></div></div></td>'
-
-            lt += row_total
-            gt += row_total
-            tbl += f'<td style="font-weight:700;color:#1B2838;">{row_total}</td></tr>'
-
-        # Subtotal row spans full width
-        tbl += f'<tr class="subtotal-row"><td colspan="2"><strong>Subtotal - {html.escape(str(lob))}</strong></td>'
-        for yr in years_list:
-            tbl += f'<td><strong>{lt_per_year[yr]:,}</strong></td>'
-        tbl += f'<td><strong>{lt:,}</strong></td></tr>'
-
-    # Grand total row - sticky bold at bottom
-    tbl += f'<tr class="total-row"><td colspan="2"><strong>GRAND TOTAL</strong></td>'
-    for yr in years_list:
-        tbl += f'<td><strong>{gt_per_year[yr]:,}</strong></td>'
-    tbl += f'<td><strong>{gt:,}</strong></td></tr>'
-    tbl += '</tbody></table></div>'
-    return tbl
-
-
 PLOTLY_CONFIG = {'displayModeBar': True, 'displaylogo': False}
-
 CHART_LAYOUT_DEFAULTS = dict(
     font=dict(family='Inter, sans-serif', size=12, color='#4A5568'),
     paper_bgcolor='white',
@@ -537,188 +363,74 @@ CHART_LAYOUT_DEFAULTS = dict(
     xaxis=dict(gridcolor='#E2E8F0', showline=True, linecolor='#E2E8F0'),
     yaxis=dict(gridcolor='#E2E8F0', showline=True, linecolor='#E2E8F0'),
 )
-
 CHART_TITLE_FONT = {'size': 16, 'color': '#1B2838', 'family': 'Inter, sans-serif'}
 
 
 @st.cache_data(ttl=CACHE_TTL)
-def convert_df_to_csv(_df):
-    """Convert dataframe to CSV bytes for download."""
-    return _df.to_csv(index=False, encoding='utf-8-sig').encode('utf-8-sig')
+def convert_df_to_csv(_df_csv):
+    return _df_csv.to_csv(index=False, encoding='utf-8-sig').encode('utf-8-sig')
 
 
 # ============================================================================
-# FILTERS – Available options (UI will be rendered later, above Cost Analysis)
+# FILTERS - Using multiselect (much faster than individual checkboxes)
 # ============================================================================
 available_years = sorted([int(y) for y in df['Year'].dropna().unique()])
-available_services = safe_sorted_unique(df['ประเภทการบริการ'])
+available_services = safe_sorted_unique(df['\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e01\u0e32\u0e23\u0e1a\u0e23\u0e34\u0e01\u0e32\u0e23'])
 available_lobs = safe_sorted_unique(df['LOB'])
-month_names = {1:'Jan',2:'Feb',3:'Mar',4:'Apr',5:'May',6:'Jun',7:'Jul',8:'Aug',9:'Sep',10:'Oct',11:'Nov',12:'Dec'}
 available_months = sorted([int(m) for m in df['Month'].dropna().unique()])
-month_options = [f"{m} - {month_names.get(m,'')}" for m in available_months]
-available_channels = safe_sorted_unique(df['รหัสโครงการ']) if 'รหัสโครงการ' in df.columns else []
-available_regions = safe_sorted_unique(df['จังหวัด']) if 'จังหวัด' in df.columns else []
-available_makes = safe_sorted_unique(df['ยี่ห้อรถ']) if 'ยี่ห้อรถ' in df.columns else []
-available_models = safe_sorted_unique(df['รุ่นรถ']) if 'รุ่นรถ' in df.columns else []
-
-# ---- Checkbox-based filter helpers ----
-FILTER_GROUPS = {
-    'fy': available_years,
-    'fs': available_services,
-    'fl': available_lobs,
-    'fm': available_months,
-    'fc': available_channels,
-    'fr': available_regions,
-    'fmk': available_makes,
-    'fmd': available_models,
-}
-
-def _init_checkbox_group(prefix, options, default=True):
-    """Initialise session-state keys for a checkbox group (Select All + items)."""
-    all_key = f"{prefix}__all"
-    if all_key not in st.session_state:
-        st.session_state[all_key] = default
-    for opt in options:
-        k = f"{prefix}__{opt}"
-        if k not in st.session_state:
-            st.session_state[k] = default
-
-def _read_checkbox_group(prefix, options):
-    """Return list of checked items by reading session state."""
-    return [opt for opt in options if st.session_state.get(f"{prefix}__{opt}", True)]
-
-def _make_toggle_all(prefix, options):
-    """Return a callback that syncs individual checkboxes with Select All."""
-    def _cb():
-        val = st.session_state[f"{prefix}__all"]
-        for opt in options:
-            st.session_state[f"{prefix}__{opt}"] = val
-    return _cb
-
-def render_checkbox_group(label, options, prefix):
-    """Render Select All + individual checkboxes inside the current container."""
-    st.checkbox("Select All", key=f"{prefix}__all",
-                on_change=_make_toggle_all(prefix, options))
-    # Use 2 columns for compact layout when many options
-    if len(options) > 6:
-        cols = st.columns(2)
-        for i, opt in enumerate(options):
-            with cols[i % 2]:
-                st.checkbox(str(opt), key=f"{prefix}__{opt}")
-    else:
-        for opt in options:
-            st.checkbox(str(opt), key=f"{prefix}__{opt}")
-
-# Initialise all checkbox groups
-for prefix, opts in FILTER_GROUPS.items():
-    _init_checkbox_group(prefix, opts)
-
-# Read current selections from session state
-selected_years = _read_checkbox_group('fy', available_years)
-selected_services = _read_checkbox_group('fs', available_services)
-selected_lobs = _read_checkbox_group('fl', available_lobs)
-selected_months = _read_checkbox_group('fm', available_months)
-selected_channels = _read_checkbox_group('fc', available_channels)
-selected_regions = _read_checkbox_group('fr', available_regions)
-selected_makes = _read_checkbox_group('fmk', available_makes)
-selected_models = _read_checkbox_group('fmd', available_models)
-
-if not selected_years:
-    st.warning("Please select at least one year.")
-    st.stop()
-
-# ============================================================================
-# APPLY FILTERS (single boolean mask)
-# ============================================================================
-mask = df['Year'].isin(selected_years)
-if len(selected_services) < len(available_services):
-    mask &= df['ประเภทการบริการ'].isin(selected_services)
-if len(selected_lobs) < len(available_lobs):
-    mask &= df['LOB'].isin(selected_lobs)
-if len(selected_months) < len(available_months):
-    mask &= df['Month'].isin(selected_months)
-if len(selected_channels) < len(available_channels) and 'รหัสโครงการ' in df.columns:
-    mask &= df['รหัสโครงการ'].astype(str).isin(selected_channels)
-if len(selected_regions) < len(available_regions) and 'จังหวัด' in df.columns:
-    mask &= df['จังหวัด'].astype(str).isin(selected_regions)
-if len(selected_makes) < len(available_makes) and 'ยี่ห้อรถ' in df.columns:
-    mask &= df['ยี่ห้อรถ'].astype(str).isin(selected_makes)
-if len(selected_models) < len(available_models) and 'รุ่นรถ' in df.columns:
-    mask &= df['รุ่นรถ'].astype(str).isin(selected_models)
-
-filtered_df = df[mask]
-
-# Empty state
-if len(filtered_df) == 0:
-    st.markdown("# 🚗 RSA Dashboard - Sompo Thailand")
-    st.markdown("""
-    <div class="empty-state">
-        <div class="empty-state-icon">🔍</div>
-        <div class="empty-state-title">No Data Found</div>
-        <div class="empty-state-message">Current filter selection returned no results. Please adjust your filters.</div>
-    </div>
-    """, unsafe_allow_html=True)
-    st.stop()
+month_names = {1:'Jan',2:'Feb',3:'Mar',4:'Apr',5:'May',6:'Jun',7:'Jul',8:'Aug',9:'Sep',10:'Oct',11:'Nov',12:'Dec'}
+available_channels = safe_sorted_unique(df['\u0e23\u0e2b\u0e31\u0e2a\u0e42\u0e04\u0e23\u0e07\u0e01\u0e32\u0e23']) if '\u0e23\u0e2b\u0e31\u0e2a\u0e42\u0e04\u0e23\u0e07\u0e01\u0e32\u0e23' in df.columns else []
+available_regions = safe_sorted_unique(df['\u0e08\u0e31\u0e07\u0e2b\u0e27\u0e31\u0e14']) if '\u0e08\u0e31\u0e07\u0e2b\u0e27\u0e31\u0e14' in df.columns else []
+available_makes = safe_sorted_unique(df['\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d\u0e23\u0e16']) if '\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d\u0e23\u0e16' in df.columns else []
+available_models = safe_sorted_unique(df['\u0e23\u0e38\u0e48\u0e19\u0e23\u0e16']) if '\u0e23\u0e38\u0e48\u0e19\u0e23\u0e16' in df.columns else []
 
 # ============================================================================
 # DASHBOARD HEADER
 # ============================================================================
-latest_date = df['วันที่'].max() if 'วันที่' in df.columns else "N/A"
-st.markdown("# 🚗 RSA Dashboard - Sompo Thailand")
+latest_date = df['\u0e27\u0e31\u0e19\u0e17\u0e35\u0e48'].max() if '\u0e27\u0e31\u0e19\u0e17\u0e35\u0e48' in df.columns else "N/A"
+st.markdown("# \U0001f697 RSA Dashboard - Sompo Thailand")
 st.markdown(f"### Roadside Assistance Monitoring <span class='data-freshness'>Data through: {latest_date} | Source: {data_source_label}</span>", unsafe_allow_html=True)
 
 # ============================================================================
-# KPIs
+# KPIs (computed before filters so we always show current year KPIs)
 # ============================================================================
-st.markdown('<div class="section-header">📈 Key Performance Indicators</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-header">\U0001f4c8 Key Performance Indicators</div>', unsafe_allow_html=True)
 
-current_year = max(selected_years)
+current_year = max(available_years)
 prev_year = current_year - 1
-cur_df = filtered_df[filtered_df['Year'] == current_year]
-prev_df = filtered_df[filtered_df['Year'] == prev_year]
-
-# Current & previous year fee totals (used by portfolio health)
-cur_fee = cur_df['Fee (Baht)'].sum()
-prev_fee = prev_df['Fee (Baht)'].sum()
-
+cur_df_all = df[df['Year'] == current_year]
+prev_df_all = df[df['Year'] == prev_year]
 current_month = datetime.now().month
 
-# YTD = full year-to-date for current year
-ytd_cases = len(cur_df)
-ytd_fee = cur_df['Fee (Baht)'].sum()
-prev_ytd_cases = len(prev_df[prev_df['Month'] <= current_month])
-prev_ytd_fee = prev_df[prev_df['Month'] <= current_month]['Fee (Baht)'].sum()
-
-# MTD = current month only
-mtd_fee = cur_df[cur_df['Month'] == current_month]['Fee (Baht)'].sum()
+cur_fee = cur_df_all['Fee (Baht)'].sum()
+ytd_cases = len(cur_df_all)
+ytd_fee = cur_fee
+prev_ytd_cases = len(prev_df_all[prev_df_all['Month'] <= current_month])
+prev_ytd_fee = prev_df_all[prev_df_all['Month'] <= current_month]['Fee (Baht)'].sum()
+mtd_fee = cur_df_all[cur_df_all['Month'] == current_month]['Fee (Baht)'].sum()
 mtd_util = (mtd_fee / MONTHLY_BUDGET * 100) if MONTHLY_BUDGET > 0 else 0
-prev_mtd_fee = prev_df[prev_df['Month'] == current_month]['Fee (Baht)'].sum()
-
-# Avg fee current year
-cur_avg_raw = cur_df['Fee (Baht)'].mean()
+prev_mtd_fee = prev_df_all[prev_df_all['Month'] == current_month]['Fee (Baht)'].sum()
+cur_avg_raw = cur_df_all['Fee (Baht)'].mean()
 cur_avg = 0.0 if pd.isna(cur_avg_raw) else cur_avg_raw
-prev_avg_raw = prev_df['Fee (Baht)'].mean()
+prev_avg_raw = prev_df_all['Fee (Baht)'].mean()
 prev_avg = 0.0 if pd.isna(prev_avg_raw) else prev_avg_raw
 
 def yoy_html(cur_val, prev_val, compare_year):
-    """Generate YoY comparison HTML snippet. Cost increase = bad (red), decrease = good (green)."""
     if prev_val == 0:
         return f'<div style="font-size:11px;margin-top:8px;opacity:0.8;">vs {compare_year}: N/A</div>'
     pct = (cur_val - prev_val) / prev_val * 100
     cls = "negative" if pct > 0 else "positive"
-    arrow = "▲" if pct >= 0 else "▼"
+    arrow = "\u25b2" if pct >= 0 else "\u25bc"
     return f'<div style="font-size:11px;margin-top:8px;opacity:0.9;"><span class="{cls}">{arrow} {abs(pct):.1f}%</span> vs {compare_year}</div>'
 
 mc = "negative" if mtd_util > 100 else "positive"
-
 kpi_cards = [
     (f"YTD Total Cases ({current_year})", f"{ytd_cases:,}", yoy_html(ytd_cases, prev_ytd_cases, prev_year)),
-    (f"YTD Total Fee ({current_year})", f"฿{ytd_fee:,.0f}", yoy_html(ytd_fee, prev_ytd_fee, prev_year)),
-    (f"Avg Fee/Case ({current_year})", f"฿{cur_avg:,.0f}", yoy_html(cur_avg, prev_avg, prev_year)),
-    (f"MTD Fee ({current_year})", f"฿{mtd_fee:,.0f}", yoy_html(mtd_fee, prev_mtd_fee, prev_year)),
-    ("MTD Utilization", f'<span class="{mc}">{mtd_util:.1f}%</span>', f'<div style="font-size:11px;margin-top:8px;opacity:0.8;">฿{mtd_fee:,.0f} / ฿{MONTHLY_BUDGET:,}</div>'),
+    (f"YTD Total Fee ({current_year})", f"\u0e3f{ytd_fee:,.0f}", yoy_html(ytd_fee, prev_ytd_fee, prev_year)),
+    (f"Avg Fee/Case ({current_year})", f"\u0e3f{cur_avg:,.0f}", yoy_html(cur_avg, prev_avg, prev_year)),
+    (f"MTD Fee ({current_year})", f"\u0e3f{mtd_fee:,.0f}", yoy_html(mtd_fee, prev_mtd_fee, prev_year)),
+    ("MTD Utilization", f'<span class="{mc}">{mtd_util:.1f}%</span>', f'<div style="font-size:11px;margin-top:8px;opacity:0.8;">\u0e3f{mtd_fee:,.0f} / \u0e3f{MONTHLY_BUDGET:,}</div>'),
 ]
-
 kpi_html = '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px;">'
 for title, value, extra in kpi_cards:
     kpi_html += f'<div class="metric-card"><div class="metric-title">{title}</div><div class="metric-value">{value}</div>{extra}</div>'
@@ -728,16 +440,15 @@ st.markdown(kpi_html, unsafe_allow_html=True)
 # ============================================================================
 # PORTFOLIO HEALTH
 # ============================================================================
-st.markdown('<div class="section-header">🏥 Portfolio Health Indicator</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-header">\U0001f3e5 Portfolio Health Indicator</div>', unsafe_allow_html=True)
 
-months_in_year = cur_df['Month'].nunique() if len(cur_df) > 0 else 1
+months_in_year = cur_df_all['Month'].nunique() if len(cur_df_all) > 0 else 1
 run_rate = cur_fee / max(months_in_year, 1)
 projection = run_rate * 12
 annual_budget = MONTHLY_BUDGET * 12
 expected_cost_ytd = MONTHLY_BUDGET * months_in_year
-
-# Calculate over budget percentage for health status
 over_budget_pct = ((ytd_fee - expected_cost_ytd) / expected_cost_ytd * 100) if expected_cost_ytd > 0 else 0
+
 if over_budget_pct <= HEALTH_THRESHOLD_HEALTHY:
     h_status, h_class, h_badge = "HEALTHY", "health-healthy", '<span class="health-badge badge-healthy">Healthy</span>'
 elif over_budget_pct <= HEALTH_THRESHOLD_WARNING:
@@ -745,7 +456,6 @@ elif over_budget_pct <= HEALTH_THRESHOLD_WARNING:
 else:
     h_status, h_class, h_badge = "CRITICAL", "health-critical", '<span class="health-badge badge-critical">Critical</span>'
 
-# Calculate percentages for display
 ytd_vs_expected_pct = (ytd_fee / expected_cost_ytd * 100) if expected_cost_ytd > 0 else 0
 projection_vs_budget_pct = (projection / annual_budget * 100) if annual_budget > 0 else 0
 
@@ -753,115 +463,147 @@ st.markdown(f"""
 <div class="health-indicator {h_class}">
     <div class="health-title">{h_badge} Portfolio Status: {h_status}</div>
     <div class="health-stats">
-        <div class="health-stat-item"><div class="health-stat-label">YTD Total Fee vs Expected Cost</div><div class="health-stat-value">฿{ytd_fee:,.0f} / ฿{expected_cost_ytd:,.0f} ({ytd_vs_expected_pct:.1f}%)</div></div>
-        <div class="health-stat-item"><div class="health-stat-label">Monthly Run Rate</div><div class="health-stat-value">฿{run_rate:,.0f}</div></div>
-        <div class="health-stat-item"><div class="health-stat-label">Year-End Projection vs Annual Budget</div><div class="health-stat-value">฿{projection:,.0f} / ฿{annual_budget:,.0f} ({projection_vs_budget_pct:.1f}%)</div></div>
+        <div class="health-stat-item"><div class="health-stat-label">YTD Total Fee vs Expected Cost</div><div class="health-stat-value">\u0e3f{ytd_fee:,.0f} / \u0e3f{expected_cost_ytd:,.0f} ({ytd_vs_expected_pct:.1f}%)</div></div>
+        <div class="health-stat-item"><div class="health-stat-label">Monthly Run Rate</div><div class="health-stat-value">\u0e3f{run_rate:,.0f}</div></div>
+        <div class="health-stat-item"><div class="health-stat-label">Year-End Projection vs Annual Budget</div><div class="health-stat-value">\u0e3f{projection:,.0f} / \u0e3f{annual_budget:,.0f} ({projection_vs_budget_pct:.1f}%)</div></div>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
 # ============================================================================
-# SERVICE UTILIZATION TABLE (Interactive Pivot)
+# SERVICE UTILIZATION - Interactive Pivot Table
 # ============================================================================
-st.markdown('<div class="section-header">📋 Service Utilization – Interactive Pivot Table</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-header">\U0001f4cb Service Utilization \u2013 Interactive Pivot Table</div>', unsafe_allow_html=True)
 
-# --- Pivot table controls with styled boxes ---
-pivot_cols_available = [c for c in ['LOB', 'ประเภทการบริการ', 'Year', 'Month', 'จังหวัด', 'ยี่ห้อรถ', 'รุ่นรถ', 'Policy Type', 'รหัสโครงการ', 'แผนก'] if c in filtered_df.columns]
-value_cols_available = [c for c in ['Fee (Baht)', 'ลูกค้าจ่ายส่วนต่าง'] if c in filtered_df.columns]
+pivot_cols_available = [c for c in ['LOB', '\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e01\u0e32\u0e23\u0e1a\u0e23\u0e34\u0e01\u0e32\u0e23', 'Year', 'Month', '\u0e08\u0e31\u0e07\u0e2b\u0e27\u0e31\u0e14', '\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d\u0e23\u0e16', '\u0e23\u0e38\u0e48\u0e19\u0e23\u0e16', 'Policy Type', '\u0e23\u0e2b\u0e31\u0e2a\u0e42\u0e04\u0e23\u0e07\u0e01\u0e32\u0e23', '\u0e41\u0e1c\u0e19\u0e01'] if c in df.columns]
+value_cols_available = [c for c in ['Fee (Baht)', '\u0e25\u0e39\u0e01\u0e04\u0e49\u0e32\u0e08\u0e48\u0e32\u0e22\u0e2a\u0e48\u0e27\u0e19\u0e15\u0e48\u0e32\u0e07'] if c in df.columns]
 
-# Row reorder section CSS
-st.markdown("""
-<style>
-    .row-reorder-box {
-        background: linear-gradient(135deg, #F8FAFC 0%, #EDF2F7 100%);
-        border: 1px dashed #CBD5E0;
-        border-radius: 10px;
-        padding: 14px 20px;
-        margin: 16px 0;
-    }
-    .row-reorder-label {
-        font-size: 11px;
-        font-weight: 600;
-        color: #64748B;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        margin-bottom: 10px;
-    }
-</style>
-""", unsafe_allow_html=True)
-
-# Pivot controls with seamless bordered containers
 pc1, pc2, pc3, pc4 = st.columns(4)
 with pc1:
     with st.container(border=True):
-        st.markdown("**📊 Rows**")
+        st.markdown("**\U0001f4ca Rows**")
         pivot_rows_selected = st.multiselect("Select row fields", options=pivot_cols_available, default=['LOB'], key="pivot_rows", label_visibility="collapsed")
 with pc2:
     with st.container(border=True):
-        st.markdown("**📈 Columns**")
+        st.markdown("**\U0001f4c8 Columns**")
         pivot_columns = st.multiselect("Select column fields", options=pivot_cols_available, default=['Year'], key="pivot_columns", label_visibility="collapsed")
 with pc3:
     with st.container(border=True):
-        st.markdown("**🔢 Values**")
+        st.markdown("**\U0001f522 Values**")
         pivot_value = st.selectbox("Select value", options=['Case Count'] + value_cols_available, index=0, key="pivot_value", label_visibility="collapsed")
 with pc4:
     with st.container(border=True):
-        st.markdown("**⚙️ Aggregation**")
+        st.markdown("**\u2699\ufe0f Aggregation**")
         pivot_agg = st.selectbox("Select aggregation", options=['Count', 'Sum', 'Mean', 'Median', 'Min', 'Max'], index=0, key="pivot_agg", label_visibility="collapsed")
 
-# Row field reordering with drag and drop
+# Row field reordering
 pivot_rows = list(pivot_rows_selected) if pivot_rows_selected else []
-if len(pivot_rows_selected) > 1:
-    if SORTABLES_AVAILABLE:
-        # Ensure the sortable list matches current selection
-        # (preserve previous order for items still selected, append new ones at end)
-        prev_order = st.session_state.get('_pivot_row_order', [])
-        ordered = [x for x in prev_order if x in pivot_rows_selected]
-        for x in pivot_rows_selected:
-            if x not in ordered:
-                ordered.append(x)
-        st.session_state['_pivot_row_order'] = ordered
+if len(pivot_rows_selected) > 1 and SORTABLES_AVAILABLE:
+    prev_order = st.session_state.get('_pivot_row_order', [])
+    ordered = [x for x in prev_order if x in pivot_rows_selected]
+    for x in pivot_rows_selected:
+        if x not in ordered:
+            ordered.append(x)
+    st.session_state['_pivot_row_order'] = ordered
+    with st.container(border=True):
+        st.markdown("**\u2194\ufe0f Drag to reorder row fields**")
+        sort_key = "pivot_row_sort_" + "_".join(sorted(ordered))
+        pivot_rows = sort_items(ordered, direction="horizontal", key=sort_key)
+        st.session_state['_pivot_row_order'] = pivot_rows
+elif len(pivot_rows_selected) > 1:
+    st.info("Install `streamlit-sortables` for drag-drop reordering: `pip install streamlit-sortables`")
+    st.markdown("**Current row order:** " + " \u2192 ".join(pivot_rows_selected))
 
-        with st.container(border=True):
-            st.markdown("**↔️ Drag to reorder row fields**")
-            sort_key = "pivot_row_sort_" + "_".join(sorted(ordered))
-            pivot_rows = sort_items(ordered, direction="horizontal", key=sort_key)
-            st.session_state['_pivot_row_order'] = pivot_rows
-    else:
-        st.info("Install `streamlit-sortables` for drag-drop reordering: `pip install streamlit-sortables`")
-        st.markdown("**Current row order:** " + " → ".join(pivot_rows_selected))
+# ============================================================================
+# FILTERS UI (multiselect - much faster than checkboxes)
+# ============================================================================
+st.markdown('<div class="section-header">\U0001f50d Data Filters</div>', unsafe_allow_html=True)
 
+fc1, fc2, fc3, fc4 = st.columns(4)
+with fc1:
+    with st.expander("\U0001f4c5 Year", expanded=False):
+        selected_years = st.multiselect("Year", available_years, default=available_years, key="sel_years", label_visibility="collapsed")
+    with st.expander("\U0001f527 Service Type", expanded=False):
+        selected_services = st.multiselect("Service", available_services, default=available_services, key="sel_services", label_visibility="collapsed")
+with fc2:
+    with st.expander("\U0001f4cb LOB", expanded=False):
+        selected_lobs = st.multiselect("LOB", available_lobs, default=available_lobs, key="sel_lobs", label_visibility="collapsed")
+    with st.expander("\U0001f4c6 Month", expanded=False):
+        selected_months = st.multiselect("Month", available_months, default=available_months, key="sel_months", label_visibility="collapsed",
+                                         format_func=lambda m: f"{m} - {month_names.get(m,'')}")
+with fc3:
+    with st.expander("\U0001f4e1 Channel", expanded=False):
+        selected_channels = st.multiselect("Channel", available_channels, default=available_channels, key="sel_channels", label_visibility="collapsed")
+    with st.expander("\U0001f4cd Region", expanded=False):
+        selected_regions = st.multiselect("Region", available_regions, default=available_regions, key="sel_regions", label_visibility="collapsed")
+with fc4:
+    with st.expander("\U0001f697 Vehicle Make", expanded=False):
+        selected_makes = st.multiselect("Make", available_makes, default=available_makes, key="sel_makes", label_visibility="collapsed")
+    with st.expander("\U0001f699 Vehicle Model", expanded=False):
+        selected_models = st.multiselect("Model", available_models, default=available_models, key="sel_models", label_visibility="collapsed")
+
+if not selected_years:
+    st.warning("Please select at least one year.")
+    st.stop()
+
+# ============================================================================
+# APPLY FILTERS
+# ============================================================================
+mask = df['Year'].isin(selected_years)
+if len(selected_services) < len(available_services):
+    mask &= df['\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e01\u0e32\u0e23\u0e1a\u0e23\u0e34\u0e01\u0e32\u0e23'].isin(selected_services)
+if len(selected_lobs) < len(available_lobs):
+    mask &= df['LOB'].isin(selected_lobs)
+if len(selected_months) < len(available_months):
+    mask &= df['Month'].isin(selected_months)
+if len(selected_channels) < len(available_channels) and '\u0e23\u0e2b\u0e31\u0e2a\u0e42\u0e04\u0e23\u0e07\u0e01\u0e32\u0e23' in df.columns:
+    mask &= df['\u0e23\u0e2b\u0e31\u0e2a\u0e42\u0e04\u0e23\u0e07\u0e01\u0e32\u0e23'].astype(str).isin(selected_channels)
+if len(selected_regions) < len(available_regions) and '\u0e08\u0e31\u0e07\u0e2b\u0e27\u0e31\u0e14' in df.columns:
+    mask &= df['\u0e08\u0e31\u0e07\u0e2b\u0e27\u0e31\u0e14'].astype(str).isin(selected_regions)
+if len(selected_makes) < len(available_makes) and '\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d\u0e23\u0e16' in df.columns:
+    mask &= df['\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d\u0e23\u0e16'].astype(str).isin(selected_makes)
+if len(selected_models) < len(available_models) and '\u0e23\u0e38\u0e48\u0e19\u0e23\u0e16' in df.columns:
+    mask &= df['\u0e23\u0e38\u0e48\u0e19\u0e23\u0e16'].astype(str).isin(selected_models)
+
+filtered_df = df[mask]
+
+if len(filtered_df) == 0:
+    st.markdown("""
+    <div class="empty-state">
+        <div class="empty-state-icon">\U0001f50d</div>
+        <div class="empty-state-title">No Data Found</div>
+        <div class="empty-state-message">Current filter selection returned no results. Please adjust your filters.</div>
+    </div>
+    """, unsafe_allow_html=True)
+    st.stop()
+
+# ============================================================================
+# PIVOT TABLE RENDERING
+# ============================================================================
 if pivot_rows or pivot_columns:
     try:
         agg_map = {'Count': 'count', 'Sum': 'sum', 'Mean': 'mean', 'Median': 'median', 'Min': 'min', 'Max': 'max'}
         agg_func = agg_map[pivot_agg]
 
         if pivot_value == 'Case Count':
-            _pivot_src = filtered_df.copy()
-            _pivot_src['_count'] = 1
+            _pivot_src = filtered_df.assign(_count=1)
             val_col = '_count'
-            agg_func = 'sum' if pivot_agg == 'Count' else agg_func
+            if pivot_agg == 'Count':
+                agg_func = 'sum'
         else:
-            _pivot_src = filtered_df.copy()
+            _pivot_src = filtered_df
             val_col = pivot_value
 
-        # Ensure all pivot row/column fields are string type to avoid unhashable issues
         all_pivot_fields = list(set(pivot_rows + pivot_columns))
-        for col_name in all_pivot_fields:
-            _pivot_src[col_name] = _pivot_src[col_name].astype(str).fillna('(blank)')
+        # Only convert needed columns
+        convert_needed = {col: _pivot_src[col].astype(str).fillna('(blank)') for col in all_pivot_fields}
+        if convert_needed:
+            _pivot_src = _pivot_src.assign(**convert_needed)
 
-        # Ensure value column is numeric
         if val_col != '_count':
-            _pivot_src[val_col] = pd.to_numeric(_pivot_src[val_col], errors='coerce').fillna(0)
+            _pivot_src = _pivot_src.assign(**{val_col: pd.to_numeric(_pivot_src[val_col], errors='coerce').fillna(0)})
 
-        pivot_kwargs = dict(
-            data=_pivot_src,
-            values=val_col,
-            aggfunc=agg_func,
-            fill_value=0,
-            margins=True,
-            margins_name='Grand Total',
-        )
+        pivot_kwargs = dict(data=_pivot_src, values=val_col, aggfunc=agg_func, fill_value=0, margins=True, margins_name='Grand Total')
         if pivot_rows:
             pivot_kwargs['index'] = pivot_rows
         if pivot_columns:
@@ -869,90 +611,59 @@ if pivot_rows or pivot_columns:
 
         pivot_result = pd.pivot_table(**pivot_kwargs)
 
-        # Flatten multi-level column names first
+        # Flatten multi-level columns
         if isinstance(pivot_result.columns, pd.MultiIndex):
-            new_cols = []
-            for col in pivot_result.columns:
-                col_parts = [str(c) for c in col]
-                # Check if this is the Grand Total column
-                if 'Grand Total' in col_parts:
-                    new_cols.append('Grand Total')
-                else:
-                    new_cols.append(' | '.join(col_parts).strip(' | '))
-            pivot_result.columns = new_cols
+            pivot_result.columns = [
+                'Grand Total' if 'Grand Total' in (parts := [str(c) for c in col]) else ' | '.join(parts).strip(' | ')
+                for col in pivot_result.columns
+            ]
 
-        # Sort columns numerically if they contain Month values (1,2,3,4,5,6...)
+        # Sort columns
         cols = list(pivot_result.columns)
-        # Find Grand Total column (could be exact match or contain "Grand Total")
-        gt_col = None
-        for c in cols:
-            if 'Grand Total' in str(c):
-                gt_col = c
-                break
+        gt_col = next((c for c in cols if 'Grand Total' in str(c)), None)
         non_gt_cols = [c for c in cols if c != gt_col]
 
-        # Try to sort numerically
         def sort_key(x):
             x_str = str(x)
-            # Extract number if it's just a number or starts with number
             if x_str.isdigit():
                 return (0, int(x_str))
-            # Try to extract leading number
-            match = re.match(r'^(\d+)', x_str)
-            if match:
-                return (0, int(match.group(1)))
-            return (1, x_str)
+            m = re.match(r'^(\d+)', x_str)
+            return (0, int(m.group(1))) if m else (1, x_str)
 
         try:
             sorted_cols = sorted(non_gt_cols, key=sort_key)
-        except:
+        except Exception:
             sorted_cols = non_gt_cols
-
         if gt_col:
             sorted_cols.append(gt_col)
         pivot_result = pivot_result[sorted_cols]
 
-        # If index is a MultiIndex, reset it so each row field becomes its own column
-        if isinstance(pivot_result.index, pd.MultiIndex):
-            pivot_result = pivot_result.reset_index()
-        elif pivot_result.index.name:
+        # Reset index
+        if isinstance(pivot_result.index, pd.MultiIndex) or pivot_result.index.name:
             pivot_result = pivot_result.reset_index()
 
-        # Format numeric columns
-        fmt_pivot = pivot_result.copy()
-        numeric_cols = fmt_pivot.select_dtypes(include=['float64', 'float32']).columns
-        for col in numeric_cols:
-            if pivot_agg in ('Sum', 'Count'):
+        fmt_pivot = pivot_result
+        is_int_agg = pivot_agg in ('Sum', 'Count')
+        if is_int_agg:
+            numeric_cols = fmt_pivot.select_dtypes(include=['float64', 'float32']).columns
+            for col in numeric_cols:
                 fmt_pivot[col] = fmt_pivot[col].astype(int)
 
-        is_int_agg = pivot_agg in ('Sum', 'Count')
-
-        # Separate grand total row from data rows so sorting won't move it
-        gt_label = 'Grand Total'
+        # Separate grand total row
         row_id_cols = [c for c in fmt_pivot.columns if c in pivot_rows]
+        gt_mask = pd.Series(False, index=fmt_pivot.index)
+        for rid_col in row_id_cols:
+            gt_mask |= fmt_pivot[rid_col].astype(str).str.contains('Grand Total', na=False)
 
-        # Check for Grand Total in any row identifier column
-        gt_mask = pd.Series([False] * len(fmt_pivot), index=fmt_pivot.index)
-        if row_id_cols:
-            for rid_col in row_id_cols:
-                gt_mask |= fmt_pivot[rid_col].astype(str).str.contains('Grand Total', na=False)
+        data_rows = fmt_pivot[~gt_mask]
+        grand_total_rows = fmt_pivot[gt_mask]
 
-        data_rows = fmt_pivot[~gt_mask].reset_index(drop=True)
-        grand_total_rows = fmt_pivot[gt_mask].reset_index(drop=True)
-
-        # Find numeric columns for data bars (exclude Grand Total column)
         num_cols_list = list(data_rows.select_dtypes(include=['int64', 'int32', 'float64', 'float32']).columns)
-        # Columns that should have data bars (exclude Grand Total column)
         data_bar_cols = [c for c in num_cols_list if 'Grand Total' not in str(c)]
+        global_max = max((data_rows[nc].max() for nc in data_bar_cols), default=1) if data_bar_cols else 1
+        if global_max < 1:
+            global_max = 1
 
-        # Calculate GLOBAL max across all data bar columns for consistent scaling
-        global_max = 1
-        for nc in data_bar_cols:
-            col_max = data_rows[nc].max()
-            if col_max > global_max:
-                global_max = col_max
-
-        # Build Grand Total row data if not already present
         if len(grand_total_rows) == 0 and len(data_rows) > 0 and num_cols_list:
             gt_row_data = {}
             for col in data_rows.columns:
@@ -964,106 +675,61 @@ if pivot_rows or pivot_columns:
                     gt_row_data[col] = ""
             grand_total_rows = pd.DataFrame([gt_row_data])
 
-        # Display pivot table with Grand Total row inside
         if len(data_rows) > 0:
-            pivot_html = '<div class="service-table-container" style="max-height:500px;overflow-y:auto;"><table class="service-table"><thead><tr>'
+            # Build HTML efficiently with list join
+            parts = ['<div class="service-table-container" style="max-height:500px;overflow-y:auto;"><table class="service-table"><thead><tr>']
             for col in data_rows.columns:
-                pivot_html += f'<th>{html.escape(str(col))}</th>'
-            pivot_html += '</tr></thead><tbody>'
+                parts.append(f'<th>{html.escape(str(col))}</th>')
+            parts.append('</tr></thead><tbody>')
 
-            # Data rows with data bars
             for _, row in data_rows.iterrows():
-                pivot_html += '<tr>'
+                parts.append('<tr>')
                 for col in data_rows.columns:
                     val = row[col]
                     if col in num_cols_list:
-                        if is_int_agg:
-                            cell_text = f"{int(val):,}"
-                        else:
-                            cell_text = f"{val:,.2f}"
-                        # Data bar only for non-Grand Total columns
+                        cell_text = f"{int(val):,}" if is_int_agg else f"{val:,.2f}"
                         if col in data_bar_cols:
                             bar_pct = (val / global_max * 85) if global_max > 0 else 0
-                            pivot_html += f'''<td style="position:relative;padding:0;">
-                                <div style="position:absolute;top:4px;left:4px;bottom:4px;width:{bar_pct:.1f}%;background:linear-gradient(90deg,rgba(74,144,217,0.35),rgba(111,177,255,0.2));z-index:1;border-radius:3px;"></div>
-                                <div style="position:relative;z-index:2;padding:8px 12px;">{cell_text}</div>
-                            </td>'''
+                            parts.append(f'<td style="position:relative;padding:0;"><div style="position:absolute;top:4px;left:4px;bottom:4px;width:{bar_pct:.1f}%;background:linear-gradient(90deg,rgba(74,144,217,0.35),rgba(111,177,255,0.2));z-index:1;border-radius:3px;"></div><div style="position:relative;z-index:2;padding:8px 12px;">{cell_text}</div></td>')
                         else:
-                            # Grand Total column - no data bar, bold text
-                            pivot_html += f'<td style="padding:8px 12px;font-weight:600;">{cell_text}</td>'
+                            parts.append(f'<td style="padding:8px 12px;font-weight:600;">{cell_text}</td>')
                     else:
-                        cell_text = html.escape(str(val))
-                        pivot_html += f'<td style="padding:8px 12px;">{cell_text}</td>'
-                pivot_html += '</tr>'
+                        parts.append(f'<td style="padding:8px 12px;">{html.escape(str(val))}</td>')
+                parts.append('</tr>')
 
-            # Grand Total row inside the table - light gray background, black text
             if len(grand_total_rows) > 0:
-                pivot_html += '<tr>'
+                parts.append('<tr>')
                 for col in data_rows.columns:
                     if col in grand_total_rows.columns:
                         val = grand_total_rows[col].iloc[0]
                         if isinstance(val, (int, float)) and col in num_cols_list:
-                            if is_int_agg:
-                                display_val = f"{int(val):,}"
-                            else:
-                                display_val = f"{val:,.2f}"
+                            display_val = f"{int(val):,}" if is_int_agg else f"{val:,.2f}"
                         else:
                             display_val = html.escape(str(val)) if val else ""
                     else:
                         display_val = ""
-                    pivot_html += f'<td style="background-color:#E2E8F0;color:#1B2838;font-weight:600;padding:8px 12px;border-top:2px solid #CBD5E0;">{display_val}</td>'
-                pivot_html += '</tr>'
+                    parts.append(f'<td style="background-color:#E2E8F0;color:#1B2838;font-weight:600;padding:8px 12px;border-top:2px solid #CBD5E0;">{display_val}</td>')
+                parts.append('</tr>')
 
-            pivot_html += '</tbody></table></div>'
-            st.markdown(pivot_html, unsafe_allow_html=True)
+            parts.append('</tbody></table></div>')
+            st.markdown(''.join(parts), unsafe_allow_html=True)
 
-        # Download pivot (full data including grand total)
         csv_pivot = fmt_pivot.to_csv(index=False, encoding='utf-8-sig').encode('utf-8-sig')
-        st.download_button("Download Pivot CSV", data=csv_pivot,
-                           file_name="RSA_Pivot_Export.csv", mime="text/csv", key="dl_pivot")
+        st.download_button("Download Pivot CSV", data=csv_pivot, file_name="RSA_Pivot_Export.csv", mime="text/csv", key="dl_pivot")
     except Exception as e:
         st.error(f"Pivot table error: {e}")
 else:
     st.info("Select at least one Row or Column dimension to build the pivot table.")
 
 # ============================================================================
-# FILTERS – UI Section (above Cost Analysis) – Checkbox-based
-# ============================================================================
-st.markdown('<div class="section-header">🔍 Data Filters</div>', unsafe_allow_html=True)
-
-fc1, fc2, fc3, fc4 = st.columns(4)
-with fc1:
-    with st.expander("📅 Year", expanded=False):
-        render_checkbox_group("Year", available_years, 'fy')
-    with st.expander("🔧 Service Type", expanded=False):
-        render_checkbox_group("Service Type", available_services, 'fs')
-with fc2:
-    with st.expander("📋 LOB", expanded=False):
-        render_checkbox_group("LOB", available_lobs, 'fl')
-    with st.expander("📆 Month", expanded=False):
-        render_checkbox_group("Month", available_months, 'fm')
-with fc3:
-    with st.expander("📡 Channel", expanded=False):
-        render_checkbox_group("Channel", available_channels, 'fc')
-    with st.expander("📍 Region", expanded=False):
-        render_checkbox_group("Region", available_regions, 'fr')
-with fc4:
-    with st.expander("🚗 Vehicle Make", expanded=False):
-        render_checkbox_group("Vehicle Make", available_makes, 'fmk')
-    with st.expander("🚙 Vehicle Model", expanded=False):
-        render_checkbox_group("Vehicle Model", available_models, 'fmd')
-
-# ============================================================================
 # COST ANALYSIS
 # ============================================================================
-st.markdown('<div class="section-header">💰 Cost Analysis Dashboard</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-header">\U0001f4b0 Cost Analysis Dashboard</div>', unsafe_allow_html=True)
 
 monthly_cost = filtered_df.groupby(['Year', 'Month'])['Fee (Baht)'].sum().reset_index()
 if len(monthly_cost) > 0:
     monthly_cost['Year'] = monthly_cost['Year'].astype(int)
     monthly_cost['Month'] = monthly_cost['Month'].astype(int)
-    monthly_cost['Date'] = pd.to_datetime(monthly_cost[['Year', 'Month']].assign(Day=1))
-    monthly_cost = monthly_cost.sort_values('Date')
 
     fig_trend = go.Figure()
     year_colors = ['#4A90D9', '#27AE60', '#F39C12', '#2D5AA0', '#1B2838']
@@ -1087,15 +753,16 @@ if len(monthly_cost) > 0:
 # ============================================================================
 # ADDITIONAL ANALYTICS
 # ============================================================================
-st.markdown('<div class="section-header">📊 Additional Analytics</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-header">\U0001f4ca Additional Analytics</div>', unsafe_allow_html=True)
 
 c1, c2 = st.columns(2)
 with c1:
-    svc_dist = filtered_df['ประเภทการบริการ'].value_counts()
+    svc_dist = filtered_df['\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e01\u0e32\u0e23\u0e1a\u0e23\u0e34\u0e01\u0e32\u0e23'].value_counts()
     fig_pie = px.pie(values=svc_dist.values, names=svc_dist.index, title='Service Type Distribution', hole=0.4,
                      color_discrete_sequence=['#4A90D9','#27AE60','#F39C12','#E74C3C','#1B2838','#2D5AA0','#6FB1FF'])
     fig_pie.update_traces(textposition='inside', textinfo='percent+label', textfont_size=11)
-    fig_pie.update_layout(height=400, title={'font': CHART_TITLE_FONT}, **{k: v for k, v in CHART_LAYOUT_DEFAULTS.items() if k not in ('xaxis', 'yaxis')},
+    fig_pie.update_layout(height=400, title={'font': CHART_TITLE_FONT},
+                          font=CHART_LAYOUT_DEFAULTS['font'], paper_bgcolor='white', plot_bgcolor='rgba(0,0,0,0)',
                           legend=dict(bgcolor='rgba(255,255,255,0.9)', bordercolor='#E2E8F0', borderwidth=1))
     st.plotly_chart(fig_pie, use_container_width=True, config=PLOTLY_CONFIG)
 
@@ -1109,53 +776,65 @@ with c2:
 
 c3, c4 = st.columns(2)
 with c3:
-    top_vol = filtered_df['ประเภทการบริการ'].value_counts().head(10)
+    top_vol = filtered_df['\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e01\u0e32\u0e23\u0e1a\u0e23\u0e34\u0e01\u0e32\u0e23'].value_counts().head(10)
     fig_tv = px.bar(x=top_vol.values, y=top_vol.index, orientation='h', title='Top Services by Volume',
                     labels={'x':'Cases','y':'Service'}, color=top_vol.values,
                     color_continuous_scale=[[0,'#27AE60'],[0.5,'#3D8E56'],[1,'#1E7E34']])
-    fig_tv.update_layout(height=400, showlegend=False, yaxis={'categoryorder':'total ascending', 'gridcolor':'#E2E8F0', 'showline':True, 'linecolor':'#E2E8F0'}, title={'font': CHART_TITLE_FONT}, **{k: v for k, v in CHART_LAYOUT_DEFAULTS.items() if k != 'yaxis'})
+    fig_tv.update_layout(height=400, showlegend=False,
+                         yaxis={'categoryorder':'total ascending', 'gridcolor':'#E2E8F0', 'showline':True, 'linecolor':'#E2E8F0'},
+                         title={'font': CHART_TITLE_FONT},
+                         **{k: v for k, v in CHART_LAYOUT_DEFAULTS.items() if k != 'yaxis'})
     st.plotly_chart(fig_tv, use_container_width=True, config=PLOTLY_CONFIG)
 
 with c4:
-    top_cost = filtered_df.groupby('ประเภทการบริการ')['Fee (Baht)'].sum().sort_values(ascending=False).head(10)
+    top_cost = filtered_df.groupby('\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e01\u0e32\u0e23\u0e1a\u0e23\u0e34\u0e01\u0e32\u0e23')['Fee (Baht)'].sum().sort_values(ascending=False).head(10)
     fig_tc = px.bar(x=top_cost.values, y=top_cost.index, orientation='h', title='Top Services by Cost',
                     labels={'x':'Fee (Baht)','y':'Service'}, color=top_cost.values,
                     color_continuous_scale=[[0,'#F39C12'],[0.5,'#E74C3C'],[1,'#C0392B']])
-    fig_tc.update_layout(height=400, showlegend=False, yaxis={'categoryorder':'total ascending', 'gridcolor':'#E2E8F0', 'showline':True, 'linecolor':'#E2E8F0'}, title={'font': CHART_TITLE_FONT}, **{k: v for k, v in CHART_LAYOUT_DEFAULTS.items() if k != 'yaxis'})
+    fig_tc.update_layout(height=400, showlegend=False,
+                         yaxis={'categoryorder':'total ascending', 'gridcolor':'#E2E8F0', 'showline':True, 'linecolor':'#E2E8F0'},
+                         title={'font': CHART_TITLE_FONT},
+                         **{k: v for k, v in CHART_LAYOUT_DEFAULTS.items() if k != 'yaxis'})
     st.plotly_chart(fig_tc, use_container_width=True, config=PLOTLY_CONFIG)
 
 # ============================================================================
 # REGIONAL ANALYSIS
 # ============================================================================
-if 'จังหวัด' in filtered_df.columns:
-    st.markdown('<div class="section-header">🗺️ Regional Analysis</div>', unsafe_allow_html=True)
+if '\u0e08\u0e31\u0e07\u0e2b\u0e27\u0e31\u0e14' in filtered_df.columns:
+    st.markdown('<div class="section-header">\U0001f5fa\ufe0f Regional Analysis</div>', unsafe_allow_html=True)
     c5, c6 = st.columns(2)
     with c5:
-        rc = filtered_df['จังหวัด'].value_counts().head(15)
+        rc = filtered_df['\u0e08\u0e31\u0e07\u0e2b\u0e27\u0e31\u0e14'].value_counts().head(15)
         fig_r = px.bar(x=rc.values, y=rc.index, orientation='h', title='Top 15 Regions by Volume',
                        labels={'x':'Cases','y':'Province'}, color=rc.values,
                        color_continuous_scale=[[0,'#4A90D9'],[0.5,'#2D5AA0'],[1,'#1B2838']])
-        fig_r.update_layout(height=500, showlegend=False, yaxis={'categoryorder':'total ascending', 'gridcolor':'#E2E8F0', 'showline':True, 'linecolor':'#E2E8F0'}, title={'font': CHART_TITLE_FONT}, **{k: v for k, v in CHART_LAYOUT_DEFAULTS.items() if k != 'yaxis'})
+        fig_r.update_layout(height=500, showlegend=False,
+                            yaxis={'categoryorder':'total ascending', 'gridcolor':'#E2E8F0', 'showline':True, 'linecolor':'#E2E8F0'},
+                            title={'font': CHART_TITLE_FONT},
+                            **{k: v for k, v in CHART_LAYOUT_DEFAULTS.items() if k != 'yaxis'})
         st.plotly_chart(fig_r, use_container_width=True, config=PLOTLY_CONFIG)
     with c6:
-        rcost = filtered_df.groupby('จังหวัด')['Fee (Baht)'].sum().sort_values(ascending=False).head(15)
+        rcost = filtered_df.groupby('\u0e08\u0e31\u0e07\u0e2b\u0e27\u0e31\u0e14')['Fee (Baht)'].sum().sort_values(ascending=False).head(15)
         fig_rc = px.bar(x=rcost.values, y=rcost.index, orientation='h', title='Top 15 Regions by Cost',
                         labels={'x':'Fee (Baht)','y':'Province'}, color=rcost.values,
                         color_continuous_scale=[[0,'#F39C12'],[0.5,'#E67E22'],[1,'#D35400']])
-        fig_rc.update_layout(height=500, showlegend=False, yaxis={'categoryorder':'total ascending', 'gridcolor':'#E2E8F0', 'showline':True, 'linecolor':'#E2E8F0'}, title={'font': CHART_TITLE_FONT}, **{k: v for k, v in CHART_LAYOUT_DEFAULTS.items() if k != 'yaxis'})
+        fig_rc.update_layout(height=500, showlegend=False,
+                             yaxis={'categoryorder':'total ascending', 'gridcolor':'#E2E8F0', 'showline':True, 'linecolor':'#E2E8F0'},
+                             title={'font': CHART_TITLE_FONT},
+                             **{k: v for k, v in CHART_LAYOUT_DEFAULTS.items() if k != 'yaxis'})
         st.plotly_chart(fig_rc, use_container_width=True, config=PLOTLY_CONFIG)
 
 # ============================================================================
 # MONTHLY TREND BY SERVICE TYPE
 # ============================================================================
-st.markdown('<div class="section-header">📈 Monthly Trend by Service Type</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-header">\U0001f4c8 Monthly Trend by Service Type</div>', unsafe_allow_html=True)
 
-mst = filtered_df.groupby(['Year', 'Month', 'ประเภทการบริการ']).size().reset_index(name='Count')
+mst = filtered_df.groupby(['Year', 'Month', '\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e01\u0e32\u0e23\u0e1a\u0e23\u0e34\u0e01\u0e32\u0e23']).size().reset_index(name='Count')
 if len(mst) > 0:
     mst['Year'] = mst['Year'].astype(int)
     mst['Month'] = mst['Month'].astype(int)
     mst['Date'] = pd.to_datetime(mst[['Year', 'Month']].assign(Day=1))
-    fig_mst = px.line(mst, x='Date', y='Count', color='ประเภทการบริการ', title='Monthly Case Volume by Service Type', markers=True)
+    fig_mst = px.line(mst, x='Date', y='Count', color='\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e01\u0e32\u0e23\u0e1a\u0e23\u0e34\u0e01\u0e32\u0e23', title='Monthly Case Volume by Service Type', markers=True)
     fig_mst.update_layout(
         xaxis_title='Date', yaxis_title='Cases', hovermode='x unified', height=450,
         title={'font': CHART_TITLE_FONT}, **CHART_LAYOUT_DEFAULTS,
@@ -1166,7 +845,7 @@ if len(mst) > 0:
 # ============================================================================
 # DATA EXPORT
 # ============================================================================
-st.markdown('<div class="section-header">💾 Data Export</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-header">\U0001f4be Data Export</div>', unsafe_allow_html=True)
 ce1, ce2 = st.columns([3, 1])
 with ce1:
     st.write(f"Export filtered data ({len(filtered_df):,} records)")
@@ -1177,21 +856,16 @@ with ce2:
                        mime="text/csv", use_container_width=True)
 
 # ============================================================================
-# FILE UPLOAD (bottom of page)
+# FILE UPLOAD
 # ============================================================================
 st.markdown("---")
-st.markdown('<div class="section-header">📂 Data Source</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-header">\U0001f4c2 Data Source</div>', unsafe_allow_html=True)
 fu1, fu2 = st.columns([3, 1])
 with fu1:
-    uploaded_file = st.file_uploader(
-        "Upload RSA Report (.xlsx)",
-        type=["xlsx"],
-        key="file_uploader",
-        help="Upload a new Excel file to replace the current data source."
-    )
+    uploaded_file = st.file_uploader("Upload RSA Report (.xlsx)", type=["xlsx"], key="file_uploader",
+                                     help="Upload a new Excel file to replace the current data source.")
     if uploaded_file is not None:
         new_bytes = uploaded_file.getvalue()
-        # Only rerun if this is a genuinely new file (avoid infinite reload loop)
         if st.session_state.uploaded_file_name != uploaded_file.name or st.session_state.uploaded_file_bytes != new_bytes:
             persist_uploaded_file(uploaded_file)
             st.session_state.uploaded_file_bytes = new_bytes
@@ -1200,14 +874,13 @@ with fu1:
             st.rerun()
 with fu2:
     st.markdown(f"**Current source:** {data_source_label}")
-    persisted_path = os.path.join(UPLOAD_DIR, "persisted_upload.xlsx")
-    if os.path.exists(persisted_path):
+    p_path = os.path.join(UPLOAD_DIR, "persisted_upload.xlsx")
+    if os.path.exists(p_path):
         if st.button("Clear uploaded file", key="clear_upload"):
-            os.remove(persisted_path)
+            os.remove(p_path)
             st.session_state.uploaded_file_bytes = None
             st.session_state.uploaded_file_name = None
             st.cache_data.clear()
             st.rerun()
 
-# Footer
 st.markdown(f"<div class='dashboard-footer'><strong>RSA Dashboard</strong> - Sompo Thailand<br>Dashboard rendered: {datetime.now().strftime('%Y-%m-%d %H:%M')}</div>", unsafe_allow_html=True)
