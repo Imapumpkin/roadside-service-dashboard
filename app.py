@@ -782,8 +782,8 @@ if pivot_rows or pivot_columns:
 
         csv_pivot = fmt_pivot.to_csv(index=False, encoding='utf-8-sig').encode('utf-8-sig')
         st.download_button("Download Pivot CSV", data=csv_pivot, file_name="RSA_Pivot_Export.csv", mime="text/csv", key="dl_pivot")
-    except Exception as e:
-        st.error(f"Pivot table error: {e}")
+    except Exception:
+        st.markdown('<div style="background:white;border-radius:12px;padding:48px 24px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.08);color:#A0AEC0;font-size:14px;">No data to display</div>', unsafe_allow_html=True)
 else:
     st.info("Select at least one Row or Column dimension to build the pivot table.")
 
@@ -792,29 +792,34 @@ else:
 # ============================================================================
 st.markdown('<div class="section-header">\U0001f4b0 Cost Analysis Dashboard</div>', unsafe_allow_html=True)
 
-monthly_cost = filtered_df.groupby(['Year', 'Month'])['Fee (Baht)'].sum().reset_index()
-if len(monthly_cost) > 0:
-    monthly_cost['Year'] = monthly_cost['Year'].astype(int)
-    monthly_cost['Month'] = monthly_cost['Month'].astype(int)
+_BLANK_BOX = '<div style="background:white;border-radius:12px;padding:48px 24px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.08);color:#A0AEC0;font-size:14px;">No data to display</div>'
 
-    fig_trend = go.Figure()
-    year_colors = ['#4A90D9', '#27AE60', '#F39C12', '#2D5AA0', '#1B2838']
-    for i, yr in enumerate(sorted(monthly_cost['Year'].unique())):
-        yd = monthly_cost[monthly_cost['Year'] == yr]
-        c = year_colors[i % len(year_colors)]
-        fig_trend.add_trace(go.Scatter(x=yd['Month'], y=yd['Fee (Baht)'], mode='lines+markers', name=f'{yr}', line=dict(width=3, color=c), marker=dict(size=8, color=c)))
+try:
+    monthly_cost = filtered_df.groupby(['Year', 'Month'])['Fee (Baht)'].sum().reset_index()
+    if len(monthly_cost) > 0:
+        monthly_cost['Year'] = monthly_cost['Year'].astype(int)
+        monthly_cost['Month'] = monthly_cost['Month'].astype(int)
 
-    fig_trend.add_trace(go.Scatter(x=list(range(1, 13)), y=[MONTHLY_BUDGET] * 12, mode='lines', name='Budget', line=dict(color='#E74C3C', width=2, dash='dash')))
-    fig_trend.update_layout(
-        title={'text': 'Monthly Cost Trend with Budget Comparison', 'font': CHART_TITLE_FONT},
-        xaxis_title='Month', yaxis_title='Fee (Baht)', hovermode='x unified', height=450,
-        xaxis=dict(tickmode='linear', tick0=1, dtick=1, gridcolor='#E2E8F0', showline=True, linecolor='#E2E8F0'),
-        yaxis=dict(gridcolor='#E2E8F0', showline=True, linecolor='#E2E8F0'),
-        plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='white',
-        font=dict(family='Inter, sans-serif', size=12, color='#4A5568'),
-        legend=dict(bgcolor='rgba(255,255,255,0.9)', bordercolor='#E2E8F0', borderwidth=1)
-    )
-    st.plotly_chart(fig_trend, use_container_width=True, config=PLOTLY_CONFIG)
+        fig_trend = go.Figure()
+        year_colors = ['#4A90D9', '#27AE60', '#F39C12', '#2D5AA0', '#1B2838']
+        for i, yr in enumerate(sorted(monthly_cost['Year'].unique())):
+            yd = monthly_cost[monthly_cost['Year'] == yr]
+            c = year_colors[i % len(year_colors)]
+            fig_trend.add_trace(go.Scatter(x=yd['Month'], y=yd['Fee (Baht)'], mode='lines+markers', name=f'{yr}', line=dict(width=3, color=c), marker=dict(size=8, color=c)))
+
+        fig_trend.add_trace(go.Scatter(x=list(range(1, 13)), y=[MONTHLY_BUDGET] * 12, mode='lines', name='Budget', line=dict(color='#E74C3C', width=2, dash='dash')))
+        fig_trend.update_layout(
+            title={'text': 'Monthly Cost Trend with Budget Comparison', 'font': CHART_TITLE_FONT},
+            xaxis_title='Month', yaxis_title='Fee (Baht)', hovermode='x unified', height=450,
+            xaxis=dict(tickmode='linear', tick0=1, dtick=1, gridcolor='#E2E8F0', showline=True, linecolor='#E2E8F0'),
+            yaxis=dict(gridcolor='#E2E8F0', showline=True, linecolor='#E2E8F0'),
+            plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='white',
+            font=dict(family='Inter, sans-serif', size=12, color='#4A5568'),
+            legend=dict(bgcolor='rgba(255,255,255,0.9)', bordercolor='#E2E8F0', borderwidth=1)
+        )
+        st.plotly_chart(fig_trend, use_container_width=True, config=PLOTLY_CONFIG)
+except Exception:
+    st.markdown(_BLANK_BOX, unsafe_allow_html=True)
 
 # ============================================================================
 # ADDITIONAL ANALYTICS
@@ -823,45 +828,57 @@ st.markdown('<div class="section-header">\U0001f4ca Additional Analytics</div>',
 
 c1, c2 = st.columns(2)
 with c1:
-    svc_dist = filtered_df['\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e01\u0e32\u0e23\u0e1a\u0e23\u0e34\u0e01\u0e32\u0e23'].value_counts()
-    fig_pie = px.pie(values=svc_dist.values, names=svc_dist.index, title='Service Type Distribution', hole=0.4,
-                     color_discrete_sequence=['#4A90D9','#27AE60','#F39C12','#E74C3C','#1B2838','#2D5AA0','#6FB1FF'])
-    fig_pie.update_traces(textposition='inside', textinfo='percent+label', textfont_size=11)
-    fig_pie.update_layout(height=400, title={'font': CHART_TITLE_FONT},
-                          font=CHART_LAYOUT_DEFAULTS['font'], paper_bgcolor='white', plot_bgcolor='rgba(0,0,0,0)',
-                          legend=dict(bgcolor='rgba(255,255,255,0.9)', bordercolor='#E2E8F0', borderwidth=1))
-    st.plotly_chart(fig_pie, use_container_width=True, config=PLOTLY_CONFIG)
+    try:
+        svc_dist = filtered_df['\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e01\u0e32\u0e23\u0e1a\u0e23\u0e34\u0e01\u0e32\u0e23'].value_counts()
+        fig_pie = px.pie(values=svc_dist.values, names=svc_dist.index, title='Service Type Distribution', hole=0.4,
+                         color_discrete_sequence=['#4A90D9','#27AE60','#F39C12','#E74C3C','#1B2838','#2D5AA0','#6FB1FF'])
+        fig_pie.update_traces(textposition='inside', textinfo='percent+label', textfont_size=11)
+        fig_pie.update_layout(height=400, title={'font': CHART_TITLE_FONT},
+                              font=CHART_LAYOUT_DEFAULTS['font'], paper_bgcolor='white', plot_bgcolor='rgba(0,0,0,0)',
+                              legend=dict(bgcolor='rgba(255,255,255,0.9)', bordercolor='#E2E8F0', borderwidth=1))
+        st.plotly_chart(fig_pie, use_container_width=True, config=PLOTLY_CONFIG)
+    except Exception:
+        st.markdown(_BLANK_BOX, unsafe_allow_html=True)
 
 with c2:
-    lob_counts = filtered_df['LOB'].value_counts().sort_index()
-    fig_lob = px.bar(x=lob_counts.index, y=lob_counts.values, title='Cases by LOB',
-                     labels={'x':'LOB','y':'Cases'}, color=lob_counts.values,
-                     color_continuous_scale=[[0,'#4A90D9'],[0.5,'#2D5AA0'],[1,'#1B2838']])
-    fig_lob.update_layout(height=400, showlegend=False, title={'font': CHART_TITLE_FONT}, **CHART_LAYOUT_DEFAULTS)
-    st.plotly_chart(fig_lob, use_container_width=True, config=PLOTLY_CONFIG)
+    try:
+        lob_counts = filtered_df['LOB'].value_counts().sort_index()
+        fig_lob = px.bar(x=lob_counts.index, y=lob_counts.values, title='Cases by LOB',
+                         labels={'x':'LOB','y':'Cases'}, color=lob_counts.values,
+                         color_continuous_scale=[[0,'#4A90D9'],[0.5,'#2D5AA0'],[1,'#1B2838']])
+        fig_lob.update_layout(height=400, showlegend=False, title={'font': CHART_TITLE_FONT}, **CHART_LAYOUT_DEFAULTS)
+        st.plotly_chart(fig_lob, use_container_width=True, config=PLOTLY_CONFIG)
+    except Exception:
+        st.markdown(_BLANK_BOX, unsafe_allow_html=True)
 
 c3, c4 = st.columns(2)
 with c3:
-    top_vol = filtered_df['\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e01\u0e32\u0e23\u0e1a\u0e23\u0e34\u0e01\u0e32\u0e23'].value_counts().head(10)
-    fig_tv = px.bar(x=top_vol.values, y=top_vol.index, orientation='h', title='Top Services by Volume',
-                    labels={'x':'Cases','y':'Service'}, color=top_vol.values,
-                    color_continuous_scale=[[0,'#27AE60'],[0.5,'#3D8E56'],[1,'#1E7E34']])
-    fig_tv.update_layout(height=400, showlegend=False,
-                         yaxis={'categoryorder':'total ascending', 'gridcolor':'#E2E8F0', 'showline':True, 'linecolor':'#E2E8F0'},
-                         title={'font': CHART_TITLE_FONT},
-                         **{k: v for k, v in CHART_LAYOUT_DEFAULTS.items() if k != 'yaxis'})
-    st.plotly_chart(fig_tv, use_container_width=True, config=PLOTLY_CONFIG)
+    try:
+        top_vol = filtered_df['\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e01\u0e32\u0e23\u0e1a\u0e23\u0e34\u0e01\u0e32\u0e23'].value_counts().head(10)
+        fig_tv = px.bar(x=top_vol.values, y=top_vol.index, orientation='h', title='Top Services by Volume',
+                        labels={'x':'Cases','y':'Service'}, color=top_vol.values,
+                        color_continuous_scale=[[0,'#27AE60'],[0.5,'#3D8E56'],[1,'#1E7E34']])
+        fig_tv.update_layout(height=400, showlegend=False,
+                             yaxis={'categoryorder':'total ascending', 'gridcolor':'#E2E8F0', 'showline':True, 'linecolor':'#E2E8F0'},
+                             title={'font': CHART_TITLE_FONT},
+                             **{k: v for k, v in CHART_LAYOUT_DEFAULTS.items() if k != 'yaxis'})
+        st.plotly_chart(fig_tv, use_container_width=True, config=PLOTLY_CONFIG)
+    except Exception:
+        st.markdown(_BLANK_BOX, unsafe_allow_html=True)
 
 with c4:
-    top_cost = filtered_df.groupby('\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e01\u0e32\u0e23\u0e1a\u0e23\u0e34\u0e01\u0e32\u0e23')['Fee (Baht)'].sum().sort_values(ascending=False).head(10)
-    fig_tc = px.bar(x=top_cost.values, y=top_cost.index, orientation='h', title='Top Services by Cost',
-                    labels={'x':'Fee (Baht)','y':'Service'}, color=top_cost.values,
-                    color_continuous_scale=[[0,'#F39C12'],[0.5,'#E74C3C'],[1,'#C0392B']])
-    fig_tc.update_layout(height=400, showlegend=False,
-                         yaxis={'categoryorder':'total ascending', 'gridcolor':'#E2E8F0', 'showline':True, 'linecolor':'#E2E8F0'},
-                         title={'font': CHART_TITLE_FONT},
-                         **{k: v for k, v in CHART_LAYOUT_DEFAULTS.items() if k != 'yaxis'})
-    st.plotly_chart(fig_tc, use_container_width=True, config=PLOTLY_CONFIG)
+    try:
+        top_cost = filtered_df.groupby('\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e01\u0e32\u0e23\u0e1a\u0e23\u0e34\u0e01\u0e32\u0e23')['Fee (Baht)'].sum().sort_values(ascending=False).head(10)
+        fig_tc = px.bar(x=top_cost.values, y=top_cost.index, orientation='h', title='Top Services by Cost',
+                        labels={'x':'Fee (Baht)','y':'Service'}, color=top_cost.values,
+                        color_continuous_scale=[[0,'#F39C12'],[0.5,'#E74C3C'],[1,'#C0392B']])
+        fig_tc.update_layout(height=400, showlegend=False,
+                             yaxis={'categoryorder':'total ascending', 'gridcolor':'#E2E8F0', 'showline':True, 'linecolor':'#E2E8F0'},
+                             title={'font': CHART_TITLE_FONT},
+                             **{k: v for k, v in CHART_LAYOUT_DEFAULTS.items() if k != 'yaxis'})
+        st.plotly_chart(fig_tc, use_container_width=True, config=PLOTLY_CONFIG)
+    except Exception:
+        st.markdown(_BLANK_BOX, unsafe_allow_html=True)
 
 # ============================================================================
 # REGIONAL ANALYSIS
@@ -870,43 +887,52 @@ if '\u0e08\u0e31\u0e07\u0e2b\u0e27\u0e31\u0e14' in filtered_df.columns:
     st.markdown('<div class="section-header">\U0001f5fa\ufe0f Regional Analysis</div>', unsafe_allow_html=True)
     c5, c6 = st.columns(2)
     with c5:
-        rc = filtered_df['\u0e08\u0e31\u0e07\u0e2b\u0e27\u0e31\u0e14'].value_counts().head(15)
-        fig_r = px.bar(x=rc.values, y=rc.index, orientation='h', title='Top 15 Regions by Volume',
-                       labels={'x':'Cases','y':'Province'}, color=rc.values,
-                       color_continuous_scale=[[0,'#4A90D9'],[0.5,'#2D5AA0'],[1,'#1B2838']])
-        fig_r.update_layout(height=500, showlegend=False,
-                            yaxis={'categoryorder':'total ascending', 'gridcolor':'#E2E8F0', 'showline':True, 'linecolor':'#E2E8F0'},
-                            title={'font': CHART_TITLE_FONT},
-                            **{k: v for k, v in CHART_LAYOUT_DEFAULTS.items() if k != 'yaxis'})
-        st.plotly_chart(fig_r, use_container_width=True, config=PLOTLY_CONFIG)
+        try:
+            rc = filtered_df['\u0e08\u0e31\u0e07\u0e2b\u0e27\u0e31\u0e14'].value_counts().head(15)
+            fig_r = px.bar(x=rc.values, y=rc.index, orientation='h', title='Top 15 Regions by Volume',
+                           labels={'x':'Cases','y':'Province'}, color=rc.values,
+                           color_continuous_scale=[[0,'#4A90D9'],[0.5,'#2D5AA0'],[1,'#1B2838']])
+            fig_r.update_layout(height=500, showlegend=False,
+                                yaxis={'categoryorder':'total ascending', 'gridcolor':'#E2E8F0', 'showline':True, 'linecolor':'#E2E8F0'},
+                                title={'font': CHART_TITLE_FONT},
+                                **{k: v for k, v in CHART_LAYOUT_DEFAULTS.items() if k != 'yaxis'})
+            st.plotly_chart(fig_r, use_container_width=True, config=PLOTLY_CONFIG)
+        except Exception:
+            st.markdown(_BLANK_BOX, unsafe_allow_html=True)
     with c6:
-        rcost = filtered_df.groupby('\u0e08\u0e31\u0e07\u0e2b\u0e27\u0e31\u0e14')['Fee (Baht)'].sum().sort_values(ascending=False).head(15)
-        fig_rc = px.bar(x=rcost.values, y=rcost.index, orientation='h', title='Top 15 Regions by Cost',
-                        labels={'x':'Fee (Baht)','y':'Province'}, color=rcost.values,
-                        color_continuous_scale=[[0,'#F39C12'],[0.5,'#E67E22'],[1,'#D35400']])
-        fig_rc.update_layout(height=500, showlegend=False,
-                             yaxis={'categoryorder':'total ascending', 'gridcolor':'#E2E8F0', 'showline':True, 'linecolor':'#E2E8F0'},
-                             title={'font': CHART_TITLE_FONT},
-                             **{k: v for k, v in CHART_LAYOUT_DEFAULTS.items() if k != 'yaxis'})
-        st.plotly_chart(fig_rc, use_container_width=True, config=PLOTLY_CONFIG)
+        try:
+            rcost = filtered_df.groupby('\u0e08\u0e31\u0e07\u0e2b\u0e27\u0e31\u0e14')['Fee (Baht)'].sum().sort_values(ascending=False).head(15)
+            fig_rc = px.bar(x=rcost.values, y=rcost.index, orientation='h', title='Top 15 Regions by Cost',
+                            labels={'x':'Fee (Baht)','y':'Province'}, color=rcost.values,
+                            color_continuous_scale=[[0,'#F39C12'],[0.5,'#E67E22'],[1,'#D35400']])
+            fig_rc.update_layout(height=500, showlegend=False,
+                                 yaxis={'categoryorder':'total ascending', 'gridcolor':'#E2E8F0', 'showline':True, 'linecolor':'#E2E8F0'},
+                                 title={'font': CHART_TITLE_FONT},
+                                 **{k: v for k, v in CHART_LAYOUT_DEFAULTS.items() if k != 'yaxis'})
+            st.plotly_chart(fig_rc, use_container_width=True, config=PLOTLY_CONFIG)
+        except Exception:
+            st.markdown(_BLANK_BOX, unsafe_allow_html=True)
 
 # ============================================================================
 # MONTHLY TREND BY SERVICE TYPE
 # ============================================================================
 st.markdown('<div class="section-header">\U0001f4c8 Monthly Trend by Service Type</div>', unsafe_allow_html=True)
 
-mst = filtered_df.groupby(['Year', 'Month', '\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e01\u0e32\u0e23\u0e1a\u0e23\u0e34\u0e01\u0e32\u0e23']).size().reset_index(name='Count')
-if len(mst) > 0:
-    mst['Year'] = mst['Year'].astype(int)
-    mst['Month'] = mst['Month'].astype(int)
-    mst['Date'] = pd.to_datetime(mst[['Year', 'Month']].assign(Day=1))
-    fig_mst = px.line(mst, x='Date', y='Count', color='\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e01\u0e32\u0e23\u0e1a\u0e23\u0e34\u0e01\u0e32\u0e23', title='Monthly Case Volume by Service Type', markers=True)
-    fig_mst.update_layout(
-        xaxis_title='Date', yaxis_title='Cases', hovermode='x unified', height=450,
-        title={'font': CHART_TITLE_FONT}, **CHART_LAYOUT_DEFAULTS,
-        legend=dict(orientation="v", yanchor="top", y=1, xanchor="left", x=1.02, bgcolor='rgba(255,255,255,0.9)', bordercolor='#E2E8F0', borderwidth=1)
-    )
-    st.plotly_chart(fig_mst, use_container_width=True, config=PLOTLY_CONFIG)
+try:
+    mst = filtered_df.groupby(['Year', 'Month', '\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e01\u0e32\u0e23\u0e1a\u0e23\u0e34\u0e01\u0e32\u0e23']).size().reset_index(name='Count')
+    if len(mst) > 0:
+        mst['Year'] = mst['Year'].astype(int)
+        mst['Month'] = mst['Month'].astype(int)
+        mst['Date'] = pd.to_datetime(mst[['Year', 'Month']].assign(Day=1))
+        fig_mst = px.line(mst, x='Date', y='Count', color='\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e01\u0e32\u0e23\u0e1a\u0e23\u0e34\u0e01\u0e32\u0e23', title='Monthly Case Volume by Service Type', markers=True)
+        fig_mst.update_layout(
+            xaxis_title='Date', yaxis_title='Cases', hovermode='x unified', height=450,
+            title={'font': CHART_TITLE_FONT}, **CHART_LAYOUT_DEFAULTS,
+            legend=dict(orientation="v", yanchor="top", y=1, xanchor="left", x=1.02, bgcolor='rgba(255,255,255,0.9)', bordercolor='#E2E8F0', borderwidth=1)
+        )
+        st.plotly_chart(fig_mst, use_container_width=True, config=PLOTLY_CONFIG)
+except Exception:
+    st.markdown(_BLANK_BOX, unsafe_allow_html=True)
 
 # ============================================================================
 # DATA EXPORT
