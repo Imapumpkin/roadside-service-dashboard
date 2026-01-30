@@ -226,13 +226,18 @@ st.markdown("""
 @st.cache_data(ttl=CACHE_TTL)
 def load_and_process(file_bytes=None, file_path=None):
     """Load from bytes or path and process in one cached step."""
-    source = BytesIO(file_bytes) if file_bytes is not None else (file_path if file_path and os.path.exists(file_path) else None)
-    if source is None:
+    if file_bytes is not None:
+        source = BytesIO(file_bytes)
+    elif file_path and os.path.exists(file_path):
+        source = file_path
+    else:
         return None
 
-    # Find the correct sheet: header must contain both 'Roadside_Plan' and 'Policy Type'
+    # Find the correct sheet: prefer header containing both 'Roadside_Plan' and 'Policy Type',
+    # fallback to any sheet containing 'Policy No.' in a header row
     xls = pd.ExcelFile(source)
     df_raw = None
+    fallback_raw = None
     required_headers = {'Roadside_Plan', 'Policy Type'}
     for sheet in xls.sheet_names:
         candidate = pd.read_excel(xls, sheet_name=sheet, header=None)
@@ -241,10 +246,14 @@ def load_and_process(file_bytes=None, file_path=None):
             if required_headers.issubset(row_vals):
                 df_raw = candidate
                 break
+            if fallback_raw is None and 'Policy No.' in row_vals:
+                fallback_raw = candidate
         if df_raw is not None:
             break
     if df_raw is None:
-        # Fallback: try first sheet (backward compatibility)
+        df_raw = fallback_raw
+    if df_raw is None:
+        # Last resort: first sheet
         df_raw = pd.read_excel(xls, sheet_name=0, header=None)
 
     df = df_raw.copy()
@@ -972,7 +981,10 @@ with fu1:
                                      help="Upload a new Excel file to replace the current data source.")
     if uploaded_file is not None:
         new_bytes = uploaded_file.getvalue()
-        if st.session_state.uploaded_file_name != uploaded_file.name or st.session_state.uploaded_file_bytes != new_bytes:
+        is_new_file = (st.session_state.uploaded_file_name != uploaded_file.name
+                       or st.session_state.uploaded_file_bytes is None
+                       or len(st.session_state.uploaded_file_bytes) != len(new_bytes))
+        if is_new_file:
             # Validate file before persisting
             try:
                 test_df = load_and_process(file_bytes=new_bytes)
