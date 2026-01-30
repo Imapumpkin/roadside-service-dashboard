@@ -322,14 +322,30 @@ df = None
 data_source_label = ""
 
 if st.session_state.uploaded_file_bytes is not None:
-    df = load_and_process(file_bytes=st.session_state.uploaded_file_bytes)
-    data_source_label = f"Uploaded: {st.session_state.uploaded_file_name}"
-else:
+    try:
+        df = load_and_process(file_bytes=st.session_state.uploaded_file_bytes)
+    except Exception:
+        df = None
+    if df is None:
+        st.session_state.uploaded_file_bytes = None
+        st.session_state.uploaded_file_name = None
+        st.cache_data.clear()
+    else:
+        data_source_label = f"Uploaded: {st.session_state.uploaded_file_name}"
+
+if df is None and st.session_state.uploaded_file_bytes is None:
     persisted_path = load_persisted_upload()
     if persisted_path:
-        df = load_and_process(file_path=persisted_path)
-        data_source_label = "Previously uploaded file"
-    else:
+        try:
+            df = load_and_process(file_path=persisted_path)
+        except Exception:
+            df = None
+        if df is None:
+            # Bad persisted file — auto-remove it
+            os.remove(persisted_path)
+        else:
+            data_source_label = "Previously uploaded file"
+    if df is None:
         df = load_and_process(file_path=DEFAULT_DATA_FILE)
         if df is not None:
             data_source_label = DEFAULT_DATA_FILE
@@ -917,11 +933,23 @@ with fu1:
     if uploaded_file is not None:
         new_bytes = uploaded_file.getvalue()
         if st.session_state.uploaded_file_name != uploaded_file.name or st.session_state.uploaded_file_bytes != new_bytes:
-            persist_uploaded_file(uploaded_file)
-            st.session_state.uploaded_file_bytes = new_bytes
-            st.session_state.uploaded_file_name = uploaded_file.name
-            st.cache_data.clear()
-            st.rerun()
+            # Validate file before persisting
+            try:
+                test_df = load_and_process(file_bytes=new_bytes)
+                if test_df is None:
+                    raise ValueError("Could not process file")
+                required_check = ['Year', 'Month', 'Fee (Baht)', '\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e01\u0e32\u0e23\u0e1a\u0e23\u0e34\u0e01\u0e32\u0e23', 'LOB']
+                missing_check = [c for c in required_check if c not in test_df.columns]
+                if missing_check:
+                    raise ValueError(f"Missing required columns: {missing_check}")
+            except Exception:
+                st.error("The file is not supported. Please upload a valid RSA Report Excel file.")
+            else:
+                persist_uploaded_file(uploaded_file)
+                st.session_state.uploaded_file_bytes = new_bytes
+                st.session_state.uploaded_file_name = uploaded_file.name
+                st.cache_data.clear()
+                st.rerun()
 with fu2:
     st.markdown(f"**Current source:** {data_source_label}")
     p_path = os.path.join(UPLOAD_DIR, "persisted_upload.xlsx")
