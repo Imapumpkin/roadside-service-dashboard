@@ -226,12 +226,26 @@ st.markdown("""
 @st.cache_data(ttl=CACHE_TTL)
 def load_and_process(file_bytes=None, file_path=None):
     """Load from bytes or path and process in one cached step."""
-    if file_bytes is not None:
-        df_raw = pd.read_excel(BytesIO(file_bytes), header=None)
-    elif file_path and os.path.exists(file_path):
-        df_raw = pd.read_excel(file_path, header=None)
-    else:
+    source = BytesIO(file_bytes) if file_bytes is not None else (file_path if file_path and os.path.exists(file_path) else None)
+    if source is None:
         return None
+
+    # Find the correct sheet: header must contain both 'Roadside_Plan' and 'Policy Type'
+    xls = pd.ExcelFile(source)
+    df_raw = None
+    required_headers = {'Roadside_Plan', 'Policy Type'}
+    for sheet in xls.sheet_names:
+        candidate = pd.read_excel(xls, sheet_name=sheet, header=None)
+        for idx in range(min(len(candidate), 30)):
+            row_vals = set(str(v).strip() for v in candidate.iloc[idx].values if pd.notna(v))
+            if required_headers.issubset(row_vals):
+                df_raw = candidate
+                break
+        if df_raw is not None:
+            break
+    if df_raw is None:
+        # Fallback: try first sheet (backward compatibility)
+        df_raw = pd.read_excel(xls, sheet_name=0, header=None)
 
     df = df_raw.copy()
     # Find header row
