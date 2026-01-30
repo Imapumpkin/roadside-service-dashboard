@@ -977,7 +977,9 @@ with fu1:
                 st.cache_data.clear()
                 # Clear filter session state so they reset to new data's defaults
                 for k in ['sel_years', 'sel_services', 'sel_lobs', 'sel_months',
-                           'sel_channels', 'sel_regions', 'sel_makes', 'sel_models']:
+                           'sel_channels', 'sel_regions', 'sel_makes', 'sel_models',
+                           'pivot_columns', 'pivot_rows', 'pivot_value', 'pivot_agg',
+                           'pivot_sort_col', 'pivot_sort_order']:
                     st.session_state.pop(k, None)
                 st.rerun()
 with fu2:
@@ -989,6 +991,11 @@ with fu2:
             st.session_state.uploaded_file_bytes = None
             st.session_state.uploaded_file_name = None
             st.cache_data.clear()
+            for k in ['sel_years', 'sel_services', 'sel_lobs', 'sel_months',
+                       'sel_channels', 'sel_regions', 'sel_makes', 'sel_models',
+                       'pivot_columns', 'pivot_rows', 'pivot_value', 'pivot_agg',
+                       'pivot_sort_col', 'pivot_sort_order']:
+                st.session_state.pop(k, None)
             st.rerun()
 
 st.markdown(f"<div class='dashboard-footer'><strong>RSA Dashboard</strong> - Sompo Thailand<br>Dashboard rendered: {datetime.now().strftime('%Y-%m-%d %H:%M')}</div>", unsafe_allow_html=True)
