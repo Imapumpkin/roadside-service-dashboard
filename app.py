@@ -8,11 +8,6 @@ import html
 import re
 from io import BytesIO
 
-try:
-    from streamlit_sortables import sort_items
-    SORTABLES_AVAILABLE = True
-except ImportError:
-    SORTABLES_AVAILABLE = False
 
 # ============================================================================
 # CONFIGURATION
@@ -23,7 +18,6 @@ HEALTH_THRESHOLD_WARNING = 15
 CACHE_TTL = 3600
 DEFAULT_DATA_FILE = "(Test) RSA Report.xlsx"
 UPLOAD_DIR = "uploaded_data"
-PASSWORD = "sompo2024"
 
 pd.set_option('future.no_silent_downcasting', True)
 
@@ -43,15 +37,6 @@ def check_password():
     if st.session_state.authenticated:
         return True
 
-    st.markdown("""
-    <style>
-        .stApp { background-color: #F0F2F6; }
-        #MainMenu {visibility: hidden;}
-        footer {visibility: hidden;}
-        header {visibility: hidden;}
-    </style>
-    """, unsafe_allow_html=True)
-
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         st.markdown("""
@@ -65,7 +50,7 @@ def check_password():
             try:
                 correct_pw = st.secrets["password"]
             except Exception:
-                correct_pw = PASSWORD
+                correct_pw = "sompo2026"
             if st.session_state.password_input == correct_pw:
                 st.session_state.authenticated = True
             else:
@@ -85,139 +70,10 @@ if not check_password():
     st.stop()
 
 # ============================================================================
-# CUSTOM CSS
+# CUSTOM CSS (loaded from external file)
 # ============================================================================
-st.markdown("""
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-    * { font-family: 'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif; }
-    .main { padding: 1.5rem 2rem; background-color: #F0F2F6; }
-    .stApp { background-color: #F0F2F6; }
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
-    [data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #1B2838 0%, #2A3F54 100%);
-        padding-top: 2rem;
-    }
-    [data-testid="stSidebar"] .stMarkdown { color: #FFFFFF; }
-    [data-testid="stSidebar"] label {
-        color: #E0E6ED !important; font-weight: 500 !important;
-        font-size: 13px !important; letter-spacing: 0.03em; margin-top: 0.8rem;
-    }
-    [data-testid="stSidebar"] .stMultiSelect [data-baseweb="select"] {
-        background-color: rgba(255, 255, 255, 0.1);
-        border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 6px;
-    }
-    [data-testid="stSidebar"] h2 {
-        color: #FFFFFF !important; font-size: 18px !important;
-        font-weight: 600 !important; margin-bottom: 1.5rem;
-    }
-    .metric-card {
-        background: linear-gradient(135deg, #1B2838 0%, #2D4A5C 100%);
-        padding: 24px 20px; border-radius: 12px; color: white;
-        box-shadow: 0 4px 12px rgba(27,40,56,0.15), 0 1px 3px rgba(0,0,0,0.08);
-        margin-bottom: 16px; transition: all 0.3s ease;
-        border: 1px solid rgba(255,255,255,0.05);
-        position: relative; overflow: hidden;
-    }
-    .metric-card::before {
-        content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
-        background: linear-gradient(90deg, #4A90D9 0%, #6FB1FF 100%);
-    }
-    .metric-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(27,40,56,0.25), 0 2px 6px rgba(0,0,0,0.12);
-    }
-    .metric-title {
-        font-size: 12px; font-weight: 600; margin-bottom: 12px;
-        letter-spacing: 0.08em; color: #D0DCE8;
-    }
-    .metric-value {
-        font-size: 28px; font-weight: 700; margin-bottom: 6px;
-        line-height: 1.2; color: #FFFFFF; font-variant-numeric: tabular-nums;
-    }
-    .positive { color: #27AE60; }
-    .negative { color: #E74C3C; }
-    .warning  { color: #F39C12; }
-    .health-indicator {
-        padding: 24px 28px; border-radius: 12px; margin: 20px 0;
-        font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-        border-left: 6px solid; background: white;
-    }
-    .health-healthy { background: linear-gradient(135deg, #d4edda 0%, #e8f5e9 100%); color: #155724; border-left-color: #27AE60; }
-    .health-warning { background: linear-gradient(135deg, #fff3cd 0%, #fff9e6 100%); color: #856404; border-left-color: #F39C12; }
-    .health-critical { background: linear-gradient(135deg, #f8d7da 0%, #ffe6e8 100%); color: #721c24; border-left-color: #E74C3C; }
-    .health-indicator .health-title { font-size: 20px; margin-bottom: 16px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
-    .health-badge {
-        display: inline-block; padding: 4px 12px; border-radius: 4px;
-        font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
-    }
-    .badge-healthy { background-color: #27AE60; color: white; }
-    .badge-warning { background-color: #F39C12; color: white; }
-    .badge-critical { background-color: #E74C3C; color: white; }
-    .health-indicator .health-stats {
-        display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-        gap: 20px; margin-top: 16px;
-    }
-    .health-stat-item { display: flex; flex-direction: column; }
-    .health-stat-label { font-size: 11px; letter-spacing: 0.05em; opacity: 0.8; margin-bottom: 4px; font-weight: 600; }
-    .health-stat-value { font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
-    .section-header {
-        color: #1B2838; font-size: 24px; font-weight: 700;
-        margin-top: 48px; margin-bottom: 24px; padding-bottom: 12px;
-        border-bottom: 3px solid #4A90D9; display: flex; align-items: center; gap: 12px;
-    }
-    .data-freshness {
-        display: inline-block; font-size: 13px; color: #718096;
-        margin-left: 16px; padding: 4px 12px; background-color: #EDF2F7;
-        border-radius: 6px; font-weight: 500;
-    }
-    .service-table-container { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow-x: auto; }
-    .service-table { font-size: 13px; width: 100%; border-collapse: separate; border-spacing: 0; }
-    .service-table th {
-        background: linear-gradient(135deg, #1B2838 0%, #2A3F54 100%);
-        color: white; padding: 14px 16px; text-align: left;
-        font-weight: 600; font-size: 12px; letter-spacing: 0.05em; border: none;
-    }
-    .service-table th:first-child { border-top-left-radius: 8px; }
-    .service-table th:last-child { border-top-right-radius: 8px; }
-    .service-table td { padding: 12px 16px; border-bottom: 1px solid #E2E8F0; background-color: #FFFFFF; }
-    .service-table tr:hover td { background-color: #F8FAFC; }
-    .empty-state { background: white; border-radius: 12px; padding: 48px 24px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin: 24px 0; }
-    .empty-state-icon { font-size: 64px; margin-bottom: 16px; opacity: 0.5; }
-    .empty-state-title { font-size: 20px; font-weight: 600; color: #1B2838; margin-bottom: 8px; }
-    .empty-state-message { font-size: 14px; color: #718096; }
-    h1 { color: #1B2838 !important; font-weight: 700 !important; font-size: 32px !important; margin-bottom: 8px !important; }
-    h3 { color: #4A5568 !important; font-weight: 500 !important; font-size: 16px !important; margin-bottom: 32px !important; }
-    .js-plotly-plot { border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); background: white; padding: 12px; }
-    .stDownloadButton button {
-        background: linear-gradient(135deg, #4A90D9 0%, #2D5AA0 100%);
-        color: white; border: none; border-radius: 8px; padding: 12px 24px; font-weight: 600;
-    }
-    .stDownloadButton button:hover { background: linear-gradient(135deg, #2D5AA0 0%, #1B2838 100%); box-shadow: 0 4px 12px rgba(74,144,217,0.3); }
-    .dashboard-footer { text-align: center; color: #718096; padding: 32px 20px; margin-top: 48px; border-top: 2px solid #E2E8F0; font-size: 13px; background: white; border-radius: 12px; }
-    .stExpander { border: none !important; box-shadow: none !important; background: transparent !important; }
-    .stExpander > details { border: 1px solid #E2E8F0 !important; border-radius: 8px !important; background: white !important; box-shadow: 0 2px 8px rgba(0,0,0,0.06) !important; }
-    .stExpander > details > summary { padding: 12px 16px !important; font-weight: 600 !important; color: #1B2838 !important; font-size: 14px !important; }
-    .stExpander > details[open] > summary { border-bottom: 1px solid #E2E8F0 !important; }
-    .stExpander > details > div { padding: 16px !important; }
-    @media (max-width: 768px) {
-        .metric-card { margin-bottom: 12px; }
-        .metric-value { font-size: 22px; }
-        .section-header { font-size: 18px; margin-top: 32px; }
-        .health-indicator .health-stats { grid-template-columns: 1fr 1fr; }
-    }
-    @media (max-width: 1200px) {
-        div[style*="grid-template-columns:repeat(5"] { grid-template-columns: repeat(3, 1fr) !important; }
-        div[style*="grid-template-columns:repeat(6"] { grid-template-columns: repeat(3, 1fr) !important; }
-    }
-    @media (max-width: 768px) {
-        div[style*="grid-template-columns:repeat(5"] { grid-template-columns: repeat(2, 1fr) !important; }
-        div[style*="grid-template-columns:repeat(6"] { grid-template-columns: repeat(2, 1fr) !important; }
-    }
-</style>
-""", unsafe_allow_html=True)
+with open(os.path.join(os.path.dirname(__file__), 'style.css')) as _css_file:
+    st.markdown(f"<style>{_css_file.read()}</style>", unsafe_allow_html=True)
 
 
 # ============================================================================
@@ -393,9 +249,6 @@ if missing:
     st.error(f"Missing required columns after processing: {missing}")
     st.stop()
 
-if 'export_timestamp' not in st.session_state:
-    st.session_state.export_timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-
 
 # ============================================================================
 # HELPER FUNCTIONS
@@ -560,18 +413,7 @@ with st.container(border=True):
             pivot_rows_selected = st.multiselect("Select row fields", options=pivot_cols_available, default=['LOB'], key=f"pivot_rows_{_v}", label_visibility="collapsed")
             # Drag-to-reorder inside Rows expander
             pivot_rows = list(pivot_rows_selected) if pivot_rows_selected else []
-            if len(pivot_rows_selected) > 1 and SORTABLES_AVAILABLE:
-                prev_order = st.session_state.get('_pivot_row_order', [])
-                ordered = [x for x in prev_order if x in pivot_rows_selected]
-                for x in pivot_rows_selected:
-                    if x not in ordered:
-                        ordered.append(x)
-                st.session_state['_pivot_row_order'] = ordered
-                st.caption("Drag to reorder row fields")
-                sort_key = "pivot_row_sort_" + "_".join(sorted(ordered))
-                pivot_rows = sort_items(ordered, direction="horizontal", key=sort_key)
-                st.session_state['_pivot_row_order'] = pivot_rows
-            elif len(pivot_rows_selected) > 1:
+            if len(pivot_rows_selected) > 1:
                 st.caption("Row order: " + " \u2192 ".join(pivot_rows_selected))
     with r2c2:
         with st.expander("Values", expanded=False):
@@ -697,16 +539,11 @@ if pivot_rows or pivot_columns:
                 gt_mask_pre |= pivot_result[rid_col].astype(str).str.contains('Grand Total', na=False)
 
             if pivot_agg == '% of Row Total' and gt_col_name:
-                for idx in pivot_result.index:
-                    row_total = pivot_result.loc[idx, gt_col_name]
-                    if row_total != 0:
-                        for c in num_cols_pre:
-                            if c != gt_col_name:
-                                pivot_result.loc[idx, c] = pivot_result.loc[idx, c] / row_total * 100
-                        pivot_result.loc[idx, gt_col_name] = 100.0
-                    else:
-                        for c in num_cols_pre:
-                            pivot_result.loc[idx, c] = 0.0
+                non_gt_num = [c for c in num_cols_pre if c != gt_col_name]
+                row_totals = pivot_result[gt_col_name].replace(0, pd.NA)
+                pivot_result[non_gt_num] = pivot_result[non_gt_num].div(row_totals, axis=0) * 100
+                pivot_result[non_gt_num] = pivot_result[non_gt_num].fillna(0.0)
+                pivot_result[gt_col_name] = pivot_result[gt_col_name].apply(lambda x: 100.0 if x != 0 else 0.0)
             elif pivot_agg == '% of Column Total':
                 for c in num_cols_pre:
                     col_total = pivot_result.loc[gt_mask_pre, c].iloc[0] if gt_mask_pre.any() else pivot_result[c].sum()
@@ -774,13 +611,17 @@ if pivot_rows or pivot_columns:
                 parts.append(f'<th>{html.escape(str(col))}</th>')
             parts.append('</tr></thead><tbody>')
 
-            for _, row in data_rows.iterrows():
+            col_list = list(data_rows.columns)
+            num_col_set = set(num_cols_list)
+            bar_col_set = set(data_bar_cols)
+            values = data_rows.values
+            for row_vals in values:
                 parts.append('<tr>')
-                for col in data_rows.columns:
-                    val = row[col]
-                    if col in num_cols_list:
+                for ci, col in enumerate(col_list):
+                    val = row_vals[ci]
+                    if col in num_col_set:
                         cell_text = f"{val:.1f}%" if is_pct_agg else (f"{int(val):,}" if is_int_agg else f"{val:,.2f}")
-                        if col in data_bar_cols:
+                        if col in bar_col_set:
                             bar_pct = (val / global_max * 85) if global_max > 0 else 0
                             parts.append(f'<td style="position:relative;padding:0;"><div style="position:absolute;top:4px;left:4px;bottom:4px;width:{bar_pct:.1f}%;background:linear-gradient(90deg,rgba(74,144,217,0.35),rgba(111,177,255,0.2));z-index:1;border-radius:3px;"></div><div style="position:relative;z-index:2;padding:8px 12px;">{cell_text}</div></td>')
                         else:
@@ -816,100 +657,110 @@ else:
 # ============================================================================
 # COST ANALYSIS
 # ============================================================================
-st.markdown('<div class="section-header">\U0001f4b0 Cost Analysis Dashboard</div>', unsafe_allow_html=True)
-
 _BLANK_BOX = '<div style="background:white;border-radius:12px;padding:48px 24px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.08);color:#A0AEC0;font-size:14px;">No data to display</div>'
 
-try:
-    monthly_cost = filtered_df.groupby(['Year', 'Month'])['Fee (Baht)'].sum().reset_index()
-    if len(monthly_cost) > 0:
-        monthly_cost['Year'] = monthly_cost['Year'].astype(int)
-        monthly_cost['Month'] = monthly_cost['Month'].astype(int)
+@st.fragment
+def render_cost_analysis():
+    st.markdown('<div class="section-header">\U0001f4b0 Cost Analysis Dashboard</div>', unsafe_allow_html=True)
+    try:
+        monthly_cost = filtered_df.groupby(['Year', 'Month'])['Fee (Baht)'].sum().reset_index()
+        if len(monthly_cost) > 0:
+            monthly_cost['Year'] = monthly_cost['Year'].astype(int)
+            monthly_cost['Month'] = monthly_cost['Month'].astype(int)
 
-        fig_trend = go.Figure()
-        year_colors = ['#4A90D9', '#27AE60', '#F39C12', '#2D5AA0', '#1B2838']
-        for i, yr in enumerate(sorted(monthly_cost['Year'].unique())):
-            yd = monthly_cost[monthly_cost['Year'] == yr]
-            c = year_colors[i % len(year_colors)]
-            fig_trend.add_trace(go.Scatter(x=yd['Month'], y=yd['Fee (Baht)'], mode='lines+markers', name=f'{yr}', line=dict(width=3, color=c), marker=dict(size=8, color=c)))
+            fig_trend = go.Figure()
+            year_colors = ['#4A90D9', '#27AE60', '#F39C12', '#2D5AA0', '#1B2838']
+            for i, yr in enumerate(sorted(monthly_cost['Year'].unique())):
+                yd = monthly_cost[monthly_cost['Year'] == yr]
+                c = year_colors[i % len(year_colors)]
+                fig_trend.add_trace(go.Scatter(x=yd['Month'], y=yd['Fee (Baht)'], mode='lines+markers', name=f'{yr}', line=dict(width=3, color=c), marker=dict(size=8, color=c)))
 
-        fig_trend.add_trace(go.Scatter(x=list(range(1, 13)), y=[MONTHLY_BUDGET] * 12, mode='lines', name='Budget', line=dict(color='#E74C3C', width=2, dash='dash')))
-        fig_trend.update_layout(
-            title={'text': 'Monthly Cost Trend with Budget Comparison', 'font': CHART_TITLE_FONT},
-            xaxis_title='Month', yaxis_title='Fee (Baht)', hovermode='x unified', height=450,
-            xaxis=dict(tickmode='linear', tick0=1, dtick=1, gridcolor='#E2E8F0', showline=True, linecolor='#E2E8F0'),
-            yaxis=dict(gridcolor='#E2E8F0', showline=True, linecolor='#E2E8F0'),
-            plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='white',
-            font=dict(family='Inter, sans-serif', size=12, color='#4A5568'),
-            legend=dict(bgcolor='rgba(255,255,255,0.9)', bordercolor='#E2E8F0', borderwidth=1)
-        )
-        st.plotly_chart(fig_trend, use_container_width=True, config=PLOTLY_CONFIG)
-except Exception:
-    st.markdown(_BLANK_BOX, unsafe_allow_html=True)
+            fig_trend.add_trace(go.Scatter(x=list(range(1, 13)), y=[MONTHLY_BUDGET] * 12, mode='lines', name='Budget', line=dict(color='#E74C3C', width=2, dash='dash')))
+            fig_trend.update_layout(
+                title={'text': 'Monthly Cost Trend with Budget Comparison', 'font': CHART_TITLE_FONT},
+                xaxis_title='Month', yaxis_title='Fee (Baht)', hovermode='x unified', height=450,
+                xaxis=dict(tickmode='linear', tick0=1, dtick=1, gridcolor='#E2E8F0', showline=True, linecolor='#E2E8F0'),
+                yaxis=dict(gridcolor='#E2E8F0', showline=True, linecolor='#E2E8F0'),
+                plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='white',
+                font=dict(family='Inter, sans-serif', size=12, color='#4A5568'),
+                legend=dict(bgcolor='rgba(255,255,255,0.9)', bordercolor='#E2E8F0', borderwidth=1)
+            )
+            st.plotly_chart(fig_trend, use_container_width=True, config=PLOTLY_CONFIG)
+    except Exception:
+        st.markdown(_BLANK_BOX, unsafe_allow_html=True)
+
+render_cost_analysis()
 
 # ============================================================================
 # ADDITIONAL ANALYTICS
 # ============================================================================
-st.markdown('<div class="section-header">\U0001f4ca Additional Analytics</div>', unsafe_allow_html=True)
+@st.fragment
+def render_additional_analytics():
+    st.markdown('<div class="section-header">\U0001f4ca Additional Analytics</div>', unsafe_allow_html=True)
 
-c1, c2 = st.columns(2)
-with c1:
-    try:
-        svc_dist = filtered_df['\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e01\u0e32\u0e23\u0e1a\u0e23\u0e34\u0e01\u0e32\u0e23'].value_counts()
-        fig_pie = px.pie(values=svc_dist.values, names=svc_dist.index, title='Service Type Distribution', hole=0.4,
-                         color_discrete_sequence=['#4A90D9','#27AE60','#F39C12','#E74C3C','#1B2838','#2D5AA0','#6FB1FF'])
-        fig_pie.update_traces(textposition='inside', textinfo='percent+label', textfont_size=11)
-        fig_pie.update_layout(height=400, title={'font': CHART_TITLE_FONT},
-                              font=CHART_LAYOUT_DEFAULTS['font'], paper_bgcolor='white', plot_bgcolor='rgba(0,0,0,0)',
-                              legend=dict(bgcolor='rgba(255,255,255,0.9)', bordercolor='#E2E8F0', borderwidth=1))
-        st.plotly_chart(fig_pie, use_container_width=True, config=PLOTLY_CONFIG)
-    except Exception:
-        st.markdown(_BLANK_BOX, unsafe_allow_html=True)
+    c1, c2 = st.columns(2)
+    with c1:
+        try:
+            svc_dist = filtered_df['\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e01\u0e32\u0e23\u0e1a\u0e23\u0e34\u0e01\u0e32\u0e23'].value_counts()
+            fig_pie = px.pie(values=svc_dist.values, names=svc_dist.index, title='Service Type Distribution', hole=0.4,
+                             color_discrete_sequence=['#4A90D9','#27AE60','#F39C12','#E74C3C','#1B2838','#2D5AA0','#6FB1FF'])
+            fig_pie.update_traces(textposition='inside', textinfo='percent+label', textfont_size=11)
+            fig_pie.update_layout(height=400, title={'font': CHART_TITLE_FONT},
+                                  font=CHART_LAYOUT_DEFAULTS['font'], paper_bgcolor='white', plot_bgcolor='rgba(0,0,0,0)',
+                                  legend=dict(bgcolor='rgba(255,255,255,0.9)', bordercolor='#E2E8F0', borderwidth=1))
+            st.plotly_chart(fig_pie, use_container_width=True, config=PLOTLY_CONFIG)
+        except Exception:
+            st.markdown(_BLANK_BOX, unsafe_allow_html=True)
 
-with c2:
-    try:
-        lob_counts = filtered_df['LOB'].value_counts().sort_index()
-        fig_lob = px.bar(x=lob_counts.index, y=lob_counts.values, title='Cases by LOB',
-                         labels={'x':'LOB','y':'Cases'}, color=lob_counts.values,
-                         color_continuous_scale=[[0,'#4A90D9'],[0.5,'#2D5AA0'],[1,'#1B2838']])
-        fig_lob.update_layout(height=400, showlegend=False, title={'font': CHART_TITLE_FONT}, **CHART_LAYOUT_DEFAULTS)
-        st.plotly_chart(fig_lob, use_container_width=True, config=PLOTLY_CONFIG)
-    except Exception:
-        st.markdown(_BLANK_BOX, unsafe_allow_html=True)
+    with c2:
+        try:
+            lob_counts = filtered_df['LOB'].value_counts().sort_index()
+            fig_lob = px.bar(x=lob_counts.index, y=lob_counts.values, title='Cases by LOB',
+                             labels={'x':'LOB','y':'Cases'}, color=lob_counts.values,
+                             color_continuous_scale=[[0,'#4A90D9'],[0.5,'#2D5AA0'],[1,'#1B2838']])
+            fig_lob.update_layout(height=400, showlegend=False, title={'font': CHART_TITLE_FONT}, **CHART_LAYOUT_DEFAULTS)
+            st.plotly_chart(fig_lob, use_container_width=True, config=PLOTLY_CONFIG)
+        except Exception:
+            st.markdown(_BLANK_BOX, unsafe_allow_html=True)
 
-c3, c4 = st.columns(2)
-with c3:
-    try:
-        top_vol = filtered_df['\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e01\u0e32\u0e23\u0e1a\u0e23\u0e34\u0e01\u0e32\u0e23'].value_counts().head(10)
-        fig_tv = px.bar(x=top_vol.values, y=top_vol.index, orientation='h', title='Top Services by Volume',
-                        labels={'x':'Cases','y':'Service'}, color=top_vol.values,
-                        color_continuous_scale=[[0,'#27AE60'],[0.5,'#3D8E56'],[1,'#1E7E34']])
-        fig_tv.update_layout(height=400, showlegend=False,
-                             yaxis={'categoryorder':'total ascending', 'gridcolor':'#E2E8F0', 'showline':True, 'linecolor':'#E2E8F0'},
-                             title={'font': CHART_TITLE_FONT},
-                             **{k: v for k, v in CHART_LAYOUT_DEFAULTS.items() if k != 'yaxis'})
-        st.plotly_chart(fig_tv, use_container_width=True, config=PLOTLY_CONFIG)
-    except Exception:
-        st.markdown(_BLANK_BOX, unsafe_allow_html=True)
+    c3, c4 = st.columns(2)
+    with c3:
+        try:
+            top_vol = filtered_df['\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e01\u0e32\u0e23\u0e1a\u0e23\u0e34\u0e01\u0e32\u0e23'].value_counts().head(10)
+            fig_tv = px.bar(x=top_vol.values, y=top_vol.index, orientation='h', title='Top Services by Volume',
+                            labels={'x':'Cases','y':'Service'}, color=top_vol.values,
+                            color_continuous_scale=[[0,'#27AE60'],[0.5,'#3D8E56'],[1,'#1E7E34']])
+            fig_tv.update_layout(height=400, showlegend=False,
+                                 yaxis={'categoryorder':'total ascending', 'gridcolor':'#E2E8F0', 'showline':True, 'linecolor':'#E2E8F0'},
+                                 title={'font': CHART_TITLE_FONT},
+                                 **{k: v for k, v in CHART_LAYOUT_DEFAULTS.items() if k != 'yaxis'})
+            st.plotly_chart(fig_tv, use_container_width=True, config=PLOTLY_CONFIG)
+        except Exception:
+            st.markdown(_BLANK_BOX, unsafe_allow_html=True)
 
-with c4:
-    try:
-        top_cost = filtered_df.groupby('\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e01\u0e32\u0e23\u0e1a\u0e23\u0e34\u0e01\u0e32\u0e23')['Fee (Baht)'].sum().sort_values(ascending=False).head(10)
-        fig_tc = px.bar(x=top_cost.values, y=top_cost.index, orientation='h', title='Top Services by Cost',
-                        labels={'x':'Fee (Baht)','y':'Service'}, color=top_cost.values,
-                        color_continuous_scale=[[0,'#F39C12'],[0.5,'#E74C3C'],[1,'#C0392B']])
-        fig_tc.update_layout(height=400, showlegend=False,
-                             yaxis={'categoryorder':'total ascending', 'gridcolor':'#E2E8F0', 'showline':True, 'linecolor':'#E2E8F0'},
-                             title={'font': CHART_TITLE_FONT},
-                             **{k: v for k, v in CHART_LAYOUT_DEFAULTS.items() if k != 'yaxis'})
-        st.plotly_chart(fig_tc, use_container_width=True, config=PLOTLY_CONFIG)
-    except Exception:
-        st.markdown(_BLANK_BOX, unsafe_allow_html=True)
+    with c4:
+        try:
+            top_cost = filtered_df.groupby('\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e01\u0e32\u0e23\u0e1a\u0e23\u0e34\u0e01\u0e32\u0e23')['Fee (Baht)'].sum().sort_values(ascending=False).head(10)
+            fig_tc = px.bar(x=top_cost.values, y=top_cost.index, orientation='h', title='Top Services by Cost',
+                            labels={'x':'Fee (Baht)','y':'Service'}, color=top_cost.values,
+                            color_continuous_scale=[[0,'#F39C12'],[0.5,'#E74C3C'],[1,'#C0392B']])
+            fig_tc.update_layout(height=400, showlegend=False,
+                                 yaxis={'categoryorder':'total ascending', 'gridcolor':'#E2E8F0', 'showline':True, 'linecolor':'#E2E8F0'},
+                                 title={'font': CHART_TITLE_FONT},
+                                 **{k: v for k, v in CHART_LAYOUT_DEFAULTS.items() if k != 'yaxis'})
+            st.plotly_chart(fig_tc, use_container_width=True, config=PLOTLY_CONFIG)
+        except Exception:
+            st.markdown(_BLANK_BOX, unsafe_allow_html=True)
+
+render_additional_analytics()
 
 # ============================================================================
 # REGIONAL ANALYSIS
 # ============================================================================
-if '\u0e08\u0e31\u0e07\u0e2b\u0e27\u0e31\u0e14' in filtered_df.columns:
+@st.fragment
+def render_regional_analysis():
+    if '\u0e08\u0e31\u0e07\u0e2b\u0e27\u0e31\u0e14' not in filtered_df.columns:
+        return
     st.markdown('<div class="section-header">\U0001f5fa\ufe0f Regional Analysis</div>', unsafe_allow_html=True)
     c5, c6 = st.columns(2)
     with c5:
@@ -939,26 +790,31 @@ if '\u0e08\u0e31\u0e07\u0e2b\u0e27\u0e31\u0e14' in filtered_df.columns:
         except Exception:
             st.markdown(_BLANK_BOX, unsafe_allow_html=True)
 
+render_regional_analysis()
+
 # ============================================================================
 # MONTHLY TREND BY SERVICE TYPE
 # ============================================================================
-st.markdown('<div class="section-header">\U0001f4c8 Monthly Trend by Service Type</div>', unsafe_allow_html=True)
+@st.fragment
+def render_monthly_trend():
+    st.markdown('<div class="section-header">\U0001f4c8 Monthly Trend by Service Type</div>', unsafe_allow_html=True)
+    try:
+        mst = filtered_df.groupby(['Year', 'Month', '\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e01\u0e32\u0e23\u0e1a\u0e23\u0e34\u0e01\u0e32\u0e23']).size().reset_index(name='Count')
+        if len(mst) > 0:
+            mst['Year'] = mst['Year'].astype(int)
+            mst['Month'] = mst['Month'].astype(int)
+            mst['Date'] = pd.to_datetime(mst[['Year', 'Month']].assign(Day=1))
+            fig_mst = px.line(mst, x='Date', y='Count', color='\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e01\u0e32\u0e23\u0e1a\u0e23\u0e34\u0e01\u0e32\u0e23', title='Monthly Case Volume by Service Type', markers=True)
+            fig_mst.update_layout(
+                xaxis_title='Date', yaxis_title='Cases', hovermode='x unified', height=450,
+                title={'font': CHART_TITLE_FONT}, **CHART_LAYOUT_DEFAULTS,
+                legend=dict(orientation="v", yanchor="top", y=1, xanchor="left", x=1.02, bgcolor='rgba(255,255,255,0.9)', bordercolor='#E2E8F0', borderwidth=1)
+            )
+            st.plotly_chart(fig_mst, use_container_width=True, config=PLOTLY_CONFIG)
+    except Exception:
+        st.markdown(_BLANK_BOX, unsafe_allow_html=True)
 
-try:
-    mst = filtered_df.groupby(['Year', 'Month', '\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e01\u0e32\u0e23\u0e1a\u0e23\u0e34\u0e01\u0e32\u0e23']).size().reset_index(name='Count')
-    if len(mst) > 0:
-        mst['Year'] = mst['Year'].astype(int)
-        mst['Month'] = mst['Month'].astype(int)
-        mst['Date'] = pd.to_datetime(mst[['Year', 'Month']].assign(Day=1))
-        fig_mst = px.line(mst, x='Date', y='Count', color='\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e01\u0e32\u0e23\u0e1a\u0e23\u0e34\u0e01\u0e32\u0e23', title='Monthly Case Volume by Service Type', markers=True)
-        fig_mst.update_layout(
-            xaxis_title='Date', yaxis_title='Cases', hovermode='x unified', height=450,
-            title={'font': CHART_TITLE_FONT}, **CHART_LAYOUT_DEFAULTS,
-            legend=dict(orientation="v", yanchor="top", y=1, xanchor="left", x=1.02, bgcolor='rgba(255,255,255,0.9)', bordercolor='#E2E8F0', borderwidth=1)
-        )
-        st.plotly_chart(fig_mst, use_container_width=True, config=PLOTLY_CONFIG)
-except Exception:
-    st.markdown(_BLANK_BOX, unsafe_allow_html=True)
+render_monthly_trend()
 
 # ============================================================================
 # DATA EXPORT
@@ -970,7 +826,7 @@ with ce1:
 with ce2:
     csv_data = convert_df_to_csv(filtered_df)
     st.download_button("Download CSV", data=csv_data,
-                       file_name=f"RSA_Export_{st.session_state.export_timestamp}.csv",
+                       file_name=f"RSA_Export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
                        mime="text/csv", use_container_width=True)
 
 # ============================================================================
