@@ -478,76 +478,68 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ============================================================================
-# SERVICE UTILIZATION - Interactive Pivot Table
+# SERVICE UTILIZATION - Interactive Pivot Table (unified controls)
 # ============================================================================
 st.markdown('<div class="section-header">\U0001f4cb Service Utilization \u2013 Interactive Pivot Table</div>', unsafe_allow_html=True)
 
 pivot_cols_available = [c for c in ['LOB', '\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e01\u0e32\u0e23\u0e1a\u0e23\u0e34\u0e01\u0e32\u0e23', 'Year', 'Month', '\u0e08\u0e31\u0e07\u0e2b\u0e27\u0e31\u0e14', '\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d\u0e23\u0e16', '\u0e23\u0e38\u0e48\u0e19\u0e23\u0e16', 'Policy Type', '\u0e23\u0e2b\u0e31\u0e2a\u0e42\u0e04\u0e23\u0e07\u0e01\u0e32\u0e23', '\u0e41\u0e1c\u0e19\u0e01'] if c in df.columns]
 value_cols_available = [c for c in ['Fee (Baht)', '\u0e25\u0e39\u0e01\u0e04\u0e49\u0e32\u0e08\u0e48\u0e32\u0e22\u0e2a\u0e48\u0e27\u0e19\u0e15\u0e48\u0e32\u0e07'] if c in df.columns]
 
-pc1, pc2, pc3, pc4 = st.columns(4)
-with pc1:
-    with st.container(border=True):
-        st.markdown("**\U0001f4ca Rows**")
-        pivot_rows_selected = st.multiselect("Select row fields", options=pivot_cols_available, default=['LOB'], key="pivot_rows", label_visibility="collapsed")
-with pc2:
-    with st.container(border=True):
-        st.markdown("**\U0001f4c8 Columns**")
-        pivot_columns = st.multiselect("Select column fields", options=pivot_cols_available, default=['Year'], key="pivot_columns", label_visibility="collapsed")
-with pc3:
-    with st.container(border=True):
-        st.markdown("**\U0001f522 Values**")
-        pivot_value = st.selectbox("Select value", options=['Case Count'] + value_cols_available, index=0, key="pivot_value", label_visibility="collapsed")
-with pc4:
-    with st.container(border=True):
-        st.markdown("**\u2699\ufe0f Aggregation**")
-        pivot_agg = st.selectbox("Select aggregation", options=['Count', 'Sum', 'Mean', 'Median', 'Min', 'Max'], index=0, key="pivot_agg", label_visibility="collapsed")
+with st.container(border=True):
+    # Row 1: Data Filter + Columns
+    r1c1, r1c2 = st.columns(2)
+    with r1c1:
+        with st.expander("Data Filter", expanded=False):
+            with st.expander("Year", expanded=False):
+                selected_years = st.multiselect("Year", available_years, default=available_years, key="sel_years", label_visibility="collapsed")
+            with st.expander("Month", expanded=False):
+                selected_months = st.multiselect("Month", available_months, default=available_months, key="sel_months", label_visibility="collapsed",
+                                                 format_func=lambda m: f"{m} - {month_names.get(m,'')}")
+            with st.expander("Service Type", expanded=False):
+                selected_services = st.multiselect("Service Type", available_services, default=available_services, key="sel_services", label_visibility="collapsed")
+            with st.expander("LOB", expanded=False):
+                selected_lobs = st.multiselect("LOB", available_lobs, default=available_lobs, key="sel_lobs", label_visibility="collapsed")
+            with st.expander("Channel", expanded=False):
+                selected_channels = st.multiselect("Channel", available_channels, default=available_channels, key="sel_channels", label_visibility="collapsed")
+            with st.expander("Region", expanded=False):
+                selected_regions = st.multiselect("Region", available_regions, default=available_regions, key="sel_regions", label_visibility="collapsed")
+            with st.expander("Vehicle Make", expanded=False):
+                selected_makes = st.multiselect("Vehicle Make", available_makes, default=available_makes, key="sel_makes", label_visibility="collapsed")
+            with st.expander("Vehicle Model", expanded=False):
+                selected_models = st.multiselect("Vehicle Model", available_models, default=available_models, key="sel_models", label_visibility="collapsed")
+    with r1c2:
+        with st.expander("Columns", expanded=False):
+            pivot_columns = st.multiselect("Select column fields", options=pivot_cols_available, default=['Year'], key="pivot_columns", label_visibility="collapsed")
 
-# Row field reordering
-pivot_rows = list(pivot_rows_selected) if pivot_rows_selected else []
-if len(pivot_rows_selected) > 1 and SORTABLES_AVAILABLE:
-    prev_order = st.session_state.get('_pivot_row_order', [])
-    ordered = [x for x in prev_order if x in pivot_rows_selected]
-    for x in pivot_rows_selected:
-        if x not in ordered:
-            ordered.append(x)
-    st.session_state['_pivot_row_order'] = ordered
-    with st.container(border=True):
-        st.markdown("**\u2194\ufe0f Drag to reorder row fields**")
-        sort_key = "pivot_row_sort_" + "_".join(sorted(ordered))
-        pivot_rows = sort_items(ordered, direction="horizontal", key=sort_key)
-        st.session_state['_pivot_row_order'] = pivot_rows
-elif len(pivot_rows_selected) > 1:
-    st.info("Install `streamlit-sortables` for drag-drop reordering: `pip install streamlit-sortables`")
-    st.markdown("**Current row order:** " + " \u2192 ".join(pivot_rows_selected))
+    # Row 2: Rows + Values
+    r2c1, r2c2 = st.columns(2)
+    with r2c1:
+        with st.expander("Rows", expanded=False):
+            pivot_rows_selected = st.multiselect("Select row fields", options=pivot_cols_available, default=['LOB'], key="pivot_rows", label_visibility="collapsed")
+            # Drag-to-reorder inside Rows expander
+            pivot_rows = list(pivot_rows_selected) if pivot_rows_selected else []
+            if len(pivot_rows_selected) > 1 and SORTABLES_AVAILABLE:
+                prev_order = st.session_state.get('_pivot_row_order', [])
+                ordered = [x for x in prev_order if x in pivot_rows_selected]
+                for x in pivot_rows_selected:
+                    if x not in ordered:
+                        ordered.append(x)
+                st.session_state['_pivot_row_order'] = ordered
+                st.caption("Drag to reorder row fields")
+                sort_key = "pivot_row_sort_" + "_".join(sorted(ordered))
+                pivot_rows = sort_items(ordered, direction="horizontal", key=sort_key)
+                st.session_state['_pivot_row_order'] = pivot_rows
+            elif len(pivot_rows_selected) > 1:
+                st.caption("Row order: " + " \u2192 ".join(pivot_rows_selected))
+    with r2c2:
+        with st.expander("Values", expanded=False):
+            pivot_value = st.selectbox("Select value", options=['Case Count'] + value_cols_available, index=0, key="pivot_value", label_visibility="collapsed")
 
-# ============================================================================
-# FILTERS UI (multiselect - much faster than checkboxes)
-# ============================================================================
-st.markdown('<div class="section-header">\U0001f50d Data Filters</div>', unsafe_allow_html=True)
-
-fc1, fc2, fc3, fc4 = st.columns(4)
-with fc1:
-    with st.expander("\U0001f4c5 Year", expanded=False):
-        selected_years = st.multiselect("Year", available_years, default=available_years, key="sel_years", label_visibility="collapsed")
-    with st.expander("\U0001f527 Service Type", expanded=False):
-        selected_services = st.multiselect("Service", available_services, default=available_services, key="sel_services", label_visibility="collapsed")
-with fc2:
-    with st.expander("\U0001f4cb LOB", expanded=False):
-        selected_lobs = st.multiselect("LOB", available_lobs, default=available_lobs, key="sel_lobs", label_visibility="collapsed")
-    with st.expander("\U0001f4c6 Month", expanded=False):
-        selected_months = st.multiselect("Month", available_months, default=available_months, key="sel_months", label_visibility="collapsed",
-                                         format_func=lambda m: f"{m} - {month_names.get(m,'')}")
-with fc3:
-    with st.expander("\U0001f4e1 Channel", expanded=False):
-        selected_channels = st.multiselect("Channel", available_channels, default=available_channels, key="sel_channels", label_visibility="collapsed")
-    with st.expander("\U0001f4cd Region", expanded=False):
-        selected_regions = st.multiselect("Region", available_regions, default=available_regions, key="sel_regions", label_visibility="collapsed")
-with fc4:
-    with st.expander("\U0001f697 Vehicle Make", expanded=False):
-        selected_makes = st.multiselect("Make", available_makes, default=available_makes, key="sel_makes", label_visibility="collapsed")
-    with st.expander("\U0001f699 Vehicle Model", expanded=False):
-        selected_models = st.multiselect("Model", available_models, default=available_models, key="sel_models", label_visibility="collapsed")
+    # Row 3: Aggregation
+    r3c1, r3c2 = st.columns(2)
+    with r3c1:
+        with st.expander("Aggregation", expanded=False):
+            pivot_agg = st.selectbox("Select aggregation", options=['Count', 'Sum', 'Mean', 'Median', 'Min', 'Max'], index=0, key="pivot_agg", label_visibility="collapsed")
 
 if not selected_years:
     st.warning("Please select at least one year.")
@@ -665,13 +657,13 @@ if pivot_rows or pivot_columns:
         data_rows = fmt_pivot[~gt_mask]
         grand_total_rows = fmt_pivot[gt_mask]
 
-        # Sorting controls
+        # Compact sort controls inline
         sortable_cols = list(data_rows.columns)
-        sc1, sc2 = st.columns([2, 1])
+        sc1, sc2, sc3 = st.columns([2, 1, 4])
         with sc1:
             sort_col = st.selectbox("Sort by", options=["(default)"] + sortable_cols, index=0, key="pivot_sort_col")
         with sc2:
-            sort_order = st.radio("Order", ["Descending", "Ascending"], horizontal=True, key="pivot_sort_order")
+            sort_order = st.selectbox("Order", options=["Descending", "Ascending"], index=0, key="pivot_sort_order")
         if sort_col != "(default)" and sort_col in data_rows.columns:
             data_rows = data_rows.sort_values(by=sort_col, ascending=(sort_order == "Ascending"), na_position='last').reset_index(drop=True)
 
