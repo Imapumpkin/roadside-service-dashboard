@@ -340,6 +340,8 @@ def persist_uploaded_file(uploaded_file):
 if 'uploaded_file_bytes' not in st.session_state:
     st.session_state.uploaded_file_bytes = None
     st.session_state.uploaded_file_name = None
+if 'data_version' not in st.session_state:
+    st.session_state.data_version = 0
 
 df = None
 data_source_label = ""
@@ -529,32 +531,33 @@ with st.container(border=True):
     r1c1, r1c2 = st.columns(2)
     with r1c1:
         with st.expander("Data Filter", expanded=False):
+            _v = st.session_state.data_version
             with st.expander("Year", expanded=False):
-                selected_years = st.multiselect("Year", available_years, default=available_years, key="sel_years", label_visibility="collapsed")
+                selected_years = st.multiselect("Year", available_years, default=available_years, key=f"sel_years_{_v}", label_visibility="collapsed")
             with st.expander("Month", expanded=False):
-                selected_months = st.multiselect("Month", available_months, default=available_months, key="sel_months", label_visibility="collapsed",
+                selected_months = st.multiselect("Month", available_months, default=available_months, key=f"sel_months_{_v}", label_visibility="collapsed",
                                                  format_func=lambda m: f"{m} - {month_names.get(m,'')}")
             with st.expander("Service Type", expanded=False):
-                selected_services = st.multiselect("Service Type", available_services, default=available_services, key="sel_services", label_visibility="collapsed")
+                selected_services = st.multiselect("Service Type", available_services, default=available_services, key=f"sel_services_{_v}", label_visibility="collapsed")
             with st.expander("LOB", expanded=False):
-                selected_lobs = st.multiselect("LOB", available_lobs, default=available_lobs, key="sel_lobs", label_visibility="collapsed")
+                selected_lobs = st.multiselect("LOB", available_lobs, default=available_lobs, key=f"sel_lobs_{_v}", label_visibility="collapsed")
             with st.expander("Channel", expanded=False):
-                selected_channels = st.multiselect("Channel", available_channels, default=available_channels, key="sel_channels", label_visibility="collapsed")
+                selected_channels = st.multiselect("Channel", available_channels, default=available_channels, key=f"sel_channels_{_v}", label_visibility="collapsed")
             with st.expander("Region", expanded=False):
-                selected_regions = st.multiselect("Region", available_regions, default=available_regions, key="sel_regions", label_visibility="collapsed")
+                selected_regions = st.multiselect("Region", available_regions, default=available_regions, key=f"sel_regions_{_v}", label_visibility="collapsed")
             with st.expander("Vehicle Make", expanded=False):
-                selected_makes = st.multiselect("Vehicle Make", available_makes, default=available_makes, key="sel_makes", label_visibility="collapsed")
+                selected_makes = st.multiselect("Vehicle Make", available_makes, default=available_makes, key=f"sel_makes_{_v}", label_visibility="collapsed")
             with st.expander("Vehicle Model", expanded=False):
-                selected_models = st.multiselect("Vehicle Model", available_models, default=available_models, key="sel_models", label_visibility="collapsed")
+                selected_models = st.multiselect("Vehicle Model", available_models, default=available_models, key=f"sel_models_{_v}", label_visibility="collapsed")
     with r1c2:
         with st.expander("Columns", expanded=False):
-            pivot_columns = st.multiselect("Select column fields", options=pivot_cols_available, default=['Year'], key="pivot_columns", label_visibility="collapsed")
+            pivot_columns = st.multiselect("Select column fields", options=pivot_cols_available, default=['Year'], key=f"pivot_columns_{_v}", label_visibility="collapsed")
 
     # Row 2: Rows + Values
     r2c1, r2c2 = st.columns(2)
     with r2c1:
         with st.expander("Rows", expanded=False):
-            pivot_rows_selected = st.multiselect("Select row fields", options=pivot_cols_available, default=['LOB'], key="pivot_rows", label_visibility="collapsed")
+            pivot_rows_selected = st.multiselect("Select row fields", options=pivot_cols_available, default=['LOB'], key=f"pivot_rows_{_v}", label_visibility="collapsed")
             # Drag-to-reorder inside Rows expander
             pivot_rows = list(pivot_rows_selected) if pivot_rows_selected else []
             if len(pivot_rows_selected) > 1 and SORTABLES_AVAILABLE:
@@ -572,13 +575,13 @@ with st.container(border=True):
                 st.caption("Row order: " + " \u2192 ".join(pivot_rows_selected))
     with r2c2:
         with st.expander("Values", expanded=False):
-            pivot_value = st.selectbox("Select value", options=['Case Count'] + value_cols_available, index=0, key="pivot_value", label_visibility="collapsed")
+            pivot_value = st.selectbox("Select value", options=['Case Count'] + value_cols_available, index=0, key=f"pivot_value_{_v}", label_visibility="collapsed")
 
     # Row 3: Aggregation
     r3c1, r3c2 = st.columns(2)
     with r3c1:
         with st.expander("Aggregation", expanded=False):
-            pivot_agg = st.selectbox("Select aggregation", options=['Count', 'Sum', 'Mean', 'Median', 'Min', 'Max', '% of Row Total', '% of Column Total', '% of Grand Total'], index=0, key="pivot_agg", label_visibility="collapsed")
+            pivot_agg = st.selectbox("Select aggregation", options=['Count', 'Sum', 'Mean', 'Median', 'Min', 'Max', '% of Row Total', '% of Column Total', '% of Grand Total'], index=0, key=f"pivot_agg_{_v}", label_visibility="collapsed")
 
 if not selected_years:
     st.warning("Please select at least one year.")
@@ -741,9 +744,9 @@ if pivot_rows or pivot_columns:
         sortable_cols = list(data_rows.columns)
         sc1, sc2, sc3 = st.columns([2, 1, 4])
         with sc1:
-            sort_col = st.selectbox("Sort by", options=["(default)"] + sortable_cols, index=0, key="pivot_sort_col")
+            sort_col = st.selectbox("Sort by", options=["(default)"] + sortable_cols, index=0, key=f"pivot_sort_col_{_v}")
         with sc2:
-            sort_order = st.selectbox("Order", options=["Descending", "Ascending"], index=0, key="pivot_sort_order")
+            sort_order = st.selectbox("Order", options=["Descending", "Ascending"], index=0, key=f"pivot_sort_order_{_v}")
         if sort_col != "(default)" and sort_col in data_rows.columns:
             data_rows = data_rows.sort_values(by=sort_col, ascending=(sort_order == "Ascending"), na_position='last').reset_index(drop=True)
 
@@ -980,11 +983,11 @@ with fu1:
     uploaded_file = st.file_uploader("Upload RSA Report (.xlsx)", type=["xlsx"], key="file_uploader",
                                      help="Upload a new Excel file to replace the current data source.")
     if uploaded_file is not None:
+        import hashlib
         new_bytes = uploaded_file.getvalue()
-        is_new_file = (st.session_state.uploaded_file_name != uploaded_file.name
-                       or st.session_state.uploaded_file_bytes is None
-                       or len(st.session_state.uploaded_file_bytes) != len(new_bytes))
-        if is_new_file:
+        new_hash = hashlib.md5(new_bytes).hexdigest()
+        old_hash = st.session_state.get('uploaded_file_hash')
+        if new_hash != old_hash:
             # Validate file before persisting
             try:
                 test_df = load_and_process(file_bytes=new_bytes)
@@ -1000,13 +1003,9 @@ with fu1:
                 persist_uploaded_file(uploaded_file)
                 st.session_state.uploaded_file_bytes = new_bytes
                 st.session_state.uploaded_file_name = uploaded_file.name
+                st.session_state.uploaded_file_hash = new_hash
+                st.session_state.data_version += 1
                 st.cache_data.clear()
-                # Clear filter session state so they reset to new data's defaults
-                for k in ['sel_years', 'sel_services', 'sel_lobs', 'sel_months',
-                           'sel_channels', 'sel_regions', 'sel_makes', 'sel_models',
-                           'pivot_columns', 'pivot_rows', 'pivot_value', 'pivot_agg',
-                           'pivot_sort_col', 'pivot_sort_order']:
-                    st.session_state.pop(k, None)
                 st.rerun()
 with fu2:
     st.markdown(f"**Current source:** {data_source_label}")
@@ -1016,12 +1015,9 @@ with fu2:
             os.remove(p_path)
             st.session_state.uploaded_file_bytes = None
             st.session_state.uploaded_file_name = None
+            st.session_state.pop('uploaded_file_hash', None)
+            st.session_state.data_version += 1
             st.cache_data.clear()
-            for k in ['sel_years', 'sel_services', 'sel_lobs', 'sel_months',
-                       'sel_channels', 'sel_regions', 'sel_makes', 'sel_models',
-                       'pivot_columns', 'pivot_rows', 'pivot_value', 'pivot_agg',
-                       'pivot_sort_col', 'pivot_sort_order']:
-                st.session_state.pop(k, None)
             st.rerun()
 
 st.markdown(f"<div class='dashboard-footer'><strong>RSA Dashboard</strong> - Sompo Thailand<br>Dashboard rendered: {datetime.now().strftime('%Y-%m-%d %H:%M')}</div>", unsafe_allow_html=True)
