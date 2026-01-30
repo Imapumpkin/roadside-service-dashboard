@@ -975,6 +975,10 @@ with fu1:
                 st.session_state.uploaded_file_bytes = new_bytes
                 st.session_state.uploaded_file_name = uploaded_file.name
                 st.cache_data.clear()
+                # Clear filter session state so they reset to new data's defaults
+                for k in ['sel_years', 'sel_services', 'sel_lobs', 'sel_months',
+                           'sel_channels', 'sel_regions', 'sel_makes', 'sel_models']:
+                    st.session_state.pop(k, None)
                 st.rerun()
 with fu2:
     st.markdown(f"**Current source:** {data_source_label}")
