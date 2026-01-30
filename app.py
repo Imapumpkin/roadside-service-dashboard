@@ -539,7 +539,7 @@ with st.container(border=True):
     r3c1, r3c2 = st.columns(2)
     with r3c1:
         with st.expander("Aggregation", expanded=False):
-            pivot_agg = st.selectbox("Select aggregation", options=['Count', 'Sum', 'Mean', 'Median', 'Min', 'Max'], index=0, key="pivot_agg", label_visibility="collapsed")
+            pivot_agg = st.selectbox("Select aggregation", options=['Count', 'Sum', 'Mean', 'Median', 'Min', 'Max', '% of Row Total', '% of Column Total', '% of Grand Total'], index=0, key="pivot_agg", label_visibility="collapsed")
 
 if not selected_years:
     st.warning("Please select at least one year.")
@@ -581,13 +581,15 @@ if len(filtered_df) == 0:
 # ============================================================================
 if pivot_rows or pivot_columns:
     try:
+        is_pct_agg = pivot_agg in ('% of Row Total', '% of Column Total', '% of Grand Total')
+        base_agg = 'Sum' if is_pct_agg else pivot_agg
         agg_map = {'Count': 'count', 'Sum': 'sum', 'Mean': 'mean', 'Median': 'median', 'Min': 'min', 'Max': 'max'}
-        agg_func = agg_map[pivot_agg]
+        agg_func = agg_map[base_agg]
 
         if pivot_value == 'Case Count':
             _pivot_src = filtered_df.assign(_count=1)
             val_col = '_count'
-            if pivot_agg == 'Count':
+            if base_agg == 'Count':
                 agg_func = 'sum'
         else:
             _pivot_src = filtered_df
@@ -640,6 +642,45 @@ if pivot_rows or pivot_columns:
         # Reset index
         if isinstance(pivot_result.index, pd.MultiIndex) or pivot_result.index.name:
             pivot_result = pivot_result.reset_index()
+
+        # Apply percentage conversion if needed
+        if is_pct_agg:
+            row_id_cols_pre = [c for c in pivot_result.columns if c in pivot_rows]
+            num_cols_pre = [c for c in pivot_result.columns if c not in row_id_cols_pre]
+            gt_col_name = next((c for c in num_cols_pre if 'Grand Total' in str(c)), None)
+
+            # Exclude Grand Total row for percentage base
+            gt_mask_pre = pd.Series(False, index=pivot_result.index)
+            for rid_col in row_id_cols_pre:
+                gt_mask_pre |= pivot_result[rid_col].astype(str).str.contains('Grand Total', na=False)
+
+            if pivot_agg == '% of Row Total' and gt_col_name:
+                for idx in pivot_result.index:
+                    row_total = pivot_result.loc[idx, gt_col_name]
+                    if row_total != 0:
+                        for c in num_cols_pre:
+                            if c != gt_col_name:
+                                pivot_result.loc[idx, c] = pivot_result.loc[idx, c] / row_total * 100
+                        pivot_result.loc[idx, gt_col_name] = 100.0
+                    else:
+                        for c in num_cols_pre:
+                            pivot_result.loc[idx, c] = 0.0
+            elif pivot_agg == '% of Column Total':
+                for c in num_cols_pre:
+                    col_total = pivot_result.loc[gt_mask_pre, c].iloc[0] if gt_mask_pre.any() else pivot_result[c].sum()
+                    if col_total != 0:
+                        pivot_result[c] = pivot_result[c] / col_total * 100
+                    else:
+                        pivot_result[c] = 0.0
+            elif pivot_agg == '% of Grand Total':
+                grand_total_val = None
+                if gt_col_name and gt_mask_pre.any():
+                    grand_total_val = pivot_result.loc[gt_mask_pre, gt_col_name].iloc[0]
+                else:
+                    grand_total_val = pivot_result[num_cols_pre].values[~gt_mask_pre.values].sum()
+                if grand_total_val and grand_total_val != 0:
+                    for c in num_cols_pre:
+                        pivot_result[c] = pivot_result[c] / grand_total_val * 100
 
         fmt_pivot = pivot_result
         is_int_agg = pivot_agg in ('Sum', 'Count')
@@ -696,7 +737,7 @@ if pivot_rows or pivot_columns:
                 for col in data_rows.columns:
                     val = row[col]
                     if col in num_cols_list:
-                        cell_text = f"{int(val):,}" if is_int_agg else f"{val:,.2f}"
+                        cell_text = f"{val:.1f}%" if is_pct_agg else (f"{int(val):,}" if is_int_agg else f"{val:,.2f}")
                         if col in data_bar_cols:
                             bar_pct = (val / global_max * 85) if global_max > 0 else 0
                             parts.append(f'<td style="position:relative;padding:0;"><div style="position:absolute;top:4px;left:4px;bottom:4px;width:{bar_pct:.1f}%;background:linear-gradient(90deg,rgba(74,144,217,0.35),rgba(111,177,255,0.2));z-index:1;border-radius:3px;"></div><div style="position:relative;z-index:2;padding:8px 12px;">{cell_text}</div></td>')
@@ -712,7 +753,7 @@ if pivot_rows or pivot_columns:
                     if col in grand_total_rows.columns:
                         val = grand_total_rows[col].iloc[0]
                         if isinstance(val, (int, float)) and col in num_cols_list:
-                            display_val = f"{int(val):,}" if is_int_agg else f"{val:,.2f}"
+                            display_val = f"{val:.1f}%" if is_pct_agg else (f"{int(val):,}" if is_int_agg else f"{val:,.2f}")
                         else:
                             display_val = html.escape(str(val)) if val else ""
                     else:
