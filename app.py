@@ -61,17 +61,24 @@ def check_password():
             <div style="font-size: 14px; color: #718096; margin-bottom: 32px;">Sompo Thailand - Roadside Assistance</div>
         </div>
         """, unsafe_allow_html=True)
-        password_input = st.text_input("Enter Password", type="password", key="password_input")
-        if st.button("Login", use_container_width=True, type="primary"):
+        def try_login():
             try:
                 correct_pw = st.secrets["password"]
             except Exception:
                 correct_pw = PASSWORD
-            if password_input == correct_pw:
+            if st.session_state.password_input == correct_pw:
                 st.session_state.authenticated = True
-                st.rerun()
             else:
-                st.error("Incorrect password. Please try again.")
+                st.session_state.login_error = True
+
+        password_input = st.text_input("Enter Password", type="password", key="password_input", on_change=try_login)
+        if st.button("Login", use_container_width=True, type="primary"):
+            try_login()
+        if st.session_state.authenticated:
+            st.rerun()
+        if st.session_state.get("login_error"):
+            st.session_state.login_error = False
+            st.error("Incorrect password. Please try again.")
     return False
 
 if not check_password():
@@ -259,7 +266,7 @@ def load_and_process(file_bytes=None, file_path=None):
     # LOB
     if 'Policy No.' in df.columns:
         df['Policy Type'] = df['Policy No.'].str.extract(r'(A[CV]\d)', expand=False)
-    df['LOB'] = df['Policy Type'].fillna('Unre') if 'Policy Type' in df.columns else 'Unre'
+    df['LOB'] = df['Policy Type'].fillna('Unverify') if 'Policy Type' in df.columns else 'Unre'
 
     # Province extraction
     if '\u0e17\u0e30\u0e40\u0e1a\u0e35\u0e22\u0e19\u0e23\u0e16' in df.columns:
@@ -657,6 +664,16 @@ if pivot_rows or pivot_columns:
 
         data_rows = fmt_pivot[~gt_mask]
         grand_total_rows = fmt_pivot[gt_mask]
+
+        # Sorting controls
+        sortable_cols = list(data_rows.columns)
+        sc1, sc2 = st.columns([2, 1])
+        with sc1:
+            sort_col = st.selectbox("Sort by", options=["(default)"] + sortable_cols, index=0, key="pivot_sort_col")
+        with sc2:
+            sort_order = st.radio("Order", ["Descending", "Ascending"], horizontal=True, key="pivot_sort_order")
+        if sort_col != "(default)" and sort_col in data_rows.columns:
+            data_rows = data_rows.sort_values(by=sort_col, ascending=(sort_order == "Ascending"), na_position='last').reset_index(drop=True)
 
         num_cols_list = list(data_rows.select_dtypes(include=['int64', 'int32', 'float64', 'float32']).columns)
         data_bar_cols = [c for c in num_cols_list if 'Grand Total' not in str(c)]
