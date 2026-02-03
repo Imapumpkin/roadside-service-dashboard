@@ -163,6 +163,11 @@ def load_and_process(file_bytes=None, file_path=None):
     if 'Fee (Baht)' in df.columns:
         df['Fee (Baht)'] = pd.to_numeric(df['Fee (Baht)'], errors='coerce')
 
+    # Set Fee to 100 for cancellation or inquiry service types
+    if 'Fee (Baht)' in df.columns and '\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e01\u0e32\u0e23\u0e1a\u0e23\u0e34\u0e01\u0e32\u0e23' in df.columns:
+        cancel_inquiry_mask = df['\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e01\u0e32\u0e23\u0e1a\u0e23\u0e34\u0e01\u0e32\u0e23'].isin(['\u0e25\u0e39\u0e01\u0e04\u0e49\u0e32\u0e41\u0e08\u0e49\u0e07\u0e22\u0e01\u0e40\u0e25\u0e34\u0e01', '\u0e2a\u0e2d\u0e1a\u0e16\u0e32\u0e21\u0e02\u0e49\u0e2d\u0e21\u0e39\u0e25'])
+        df.loc[cancel_inquiry_mask, 'Fee (Baht)'] = 100
+
     if '\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d\u0e23\u0e16' in df.columns:
         df['\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d\u0e23\u0e16'] = df['\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d\u0e23\u0e16'].astype(str).str.upper().replace('<NA>', pd.NA).replace('NAN', pd.NA)
 
@@ -410,7 +415,7 @@ with st.container(border=True):
     r2c1, r2c2 = st.columns(2)
     with r2c1:
         with st.expander("Rows", expanded=False):
-            pivot_rows_selected = st.multiselect("Select row fields", options=pivot_cols_available, default=['LOB'], key=f"pivot_rows_{_v}", label_visibility="collapsed")
+            pivot_rows_selected = st.multiselect("Select row fields", options=pivot_cols_available, default=['\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e01\u0e32\u0e23\u0e1a\u0e23\u0e34\u0e01\u0e32\u0e23'], key=f"pivot_rows_{_v}", label_visibility="collapsed")
             # Drag-to-reorder inside Rows expander
             pivot_rows = list(pivot_rows_selected) if pivot_rows_selected else []
             if len(pivot_rows_selected) > 1:
