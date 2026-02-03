@@ -154,14 +154,62 @@ HEALTH_THRESHOLD_HEALTHY = 5   # % for healthy
 HEALTH_THRESHOLD_WARNING = 15  # % for warning
 ```
 
-## Styling
+## Design System (style.css)
 
-All styles are in `style.css`. Key CSS classes:
-- `.metric-card` - KPI card styling
-- `.health-indicator`, `.health-healthy`, `.health-warning`, `.health-critical` - Health status
-- `.service-table`, `.service-table-container` - Pivot table
-- `.section-header` - Section titles
-- `.positive`, `.negative` - Color indicators
+The dashboard uses a comprehensive CSS design system with design tokens.
+
+### Design Tokens (CSS Variables)
+
+```css
+/* Primary Palette */
+--color-primary-900: #0D1B2A;  /* Darkest navy */
+--color-primary-800: #1B2838;  /* Dark navy */
+--color-accent-500: #4A90D9;   /* Electric blue */
+
+/* Semantic Colors */
+--color-success-500: #10B981;  /* Green */
+--color-warning-500: #F59E0B;  /* Amber */
+--color-danger-500: #EF4444;   /* Red */
+
+/* Spacing Scale */
+--space-1 to --space-16       /* 0.25rem to 4rem */
+
+/* Typography */
+--font-size-xs to --font-size-4xl  /* 11px to 48px */
+```
+
+### Key CSS Classes
+
+| Class | Purpose |
+|-------|---------|
+| `.metric-card` | KPI cards with glass morphism effect |
+| `.metric-title` | Uppercase label in KPI cards |
+| `.metric-value` | Large numeric value in KPI cards |
+| `.health-indicator` | Portfolio health container |
+| `.health-healthy/warning/critical` | Health status variants |
+| `.health-badge` | Status pill badge |
+| `.service-table-container` | Pivot table wrapper |
+| `.service-table` | Data table with sticky headers |
+| `.section-header` | Section titles with asymmetric underline |
+| `.data-freshness` | Live status badge with pulse animation |
+| `.positive/.negative/.warning` | Semantic color classes |
+| `.empty-state` | No data placeholder |
+| `.dashboard-footer` | Page footer |
+
+### Responsive Breakpoints
+
+| Breakpoint | Target |
+|------------|--------|
+| 1200px | Large tablets, small desktops |
+| 992px | Tablets |
+| 768px | Mobile landscape, small tablets |
+| 480px | Mobile portrait |
+
+### Accessibility Features
+- Focus-visible states for keyboard navigation
+- `prefers-reduced-motion` support
+- Print-optimized styles
+- Custom scrollbar styling
 
 ## Caching Strategy
 
